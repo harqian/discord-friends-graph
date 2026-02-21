@@ -9,12 +9,20 @@
   <div id="controls">
     <h1>Discord Lattice</h1>
     <p id="status">Open Discord to scan your friends network</p>
+
+    <div id="progress-section" class="hidden">
+      <div id="progress-label">Scanning friends...</div>
+      <div id="progress-bar-bg">
+        <div id="progress-bar-fill"></div>
+      </div>
+      <div id="progress-count">0 / ?</div>
+    </div>
+
     <div id="buttons">
       <button id="scan">Scan Friends</button>
       <button id="view" disabled>View Graph</button>
       <button id="clear">Clear Data</button>
     </div>
-    <p id="progress"></p>
   </div>
   <script src="popup.js"></script>
 </body>
