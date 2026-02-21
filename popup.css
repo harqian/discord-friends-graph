@@ -63,6 +63,34 @@ h1 {
   text-align: right;
 }
 
+#scan-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+#stop {
+  flex: 1;
+  background: transparent;
+  color: #faa61a;
+  border: 1px solid #faa61a;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+#stop:hover {
+  background: rgba(250, 166, 26, 0.1);
+}
+
+#clear-during-scan {
+  flex: 1;
+  background: transparent;
+  color: #ed4245;
+  border: 1px solid #ed4245;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
 /* buttons */
 #buttons {
   display: flex;

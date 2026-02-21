@@ -1,12 +1,16 @@
 const scanBtn = document.getElementById('scan');
 const viewBtn = document.getElementById('view');
 const clearBtn = document.getElementById('clear');
+const stopBtn = document.getElementById('stop');
+const clearDuringBtn = document.getElementById('clear-during-scan');
 const status = document.getElementById('status');
 const progressSection = document.getElementById('progress-section');
 const progressLabel = document.getElementById('progress-label');
 const progressFill = document.getElementById('progress-bar-fill');
 const progressCount = document.getElementById('progress-count');
 const buttons = document.getElementById('buttons');
+
+let progressInterval = null;
 
 function showScanning(current, total) {
   progressSection.classList.remove('hidden');
@@ -25,14 +29,15 @@ function showScanning(current, total) {
   }
 }
 
-function showIdle() {
+function showIdle(msg) {
   progressSection.classList.add('hidden');
   buttons.classList.remove('hidden');
+  clearInterval(progressInterval);
+  if (msg) status.textContent = msg;
 }
 
 function showDone(count) {
-  showIdle();
-  status.textContent = `${count} friends scanned`;
+  showIdle(`${count} friends scanned`);
   viewBtn.disabled = false;
 }
 
@@ -47,8 +52,6 @@ chrome.storage.local.get(['connections', 'scanProgress'], (result) => {
   }
 });
 
-let progressInterval = null;
-
 function startProgressPolling() {
   progressInterval = setInterval(() => {
     chrome.storage.local.get(['scanProgress', 'connections'], (result) => {
@@ -57,10 +60,10 @@ function startProgressPolling() {
         showScanning(current, total);
       } else {
         clearInterval(progressInterval);
-        if (result.connections) {
+        if (result.connections && Object.keys(result.connections).length > 0) {
           showDone(Object.keys(result.connections).length);
         } else {
-          showIdle();
+          showIdle('Open Discord to scan your friends network');
         }
       }
     });
@@ -73,17 +76,28 @@ scanBtn.addEventListener('click', () => {
 
   chrome.runtime.sendMessage({ action: 'scan' }, (response) => {
     if (chrome.runtime.lastError) {
-      showIdle();
-      status.textContent = 'Error: Refresh Discord and try again';
-      clearInterval(progressInterval);
+      showIdle('Error: Refresh Discord and try again');
       return;
     }
-
     if (response?.error) {
-      showIdle();
-      status.textContent = `Error: ${response.error}`;
-      clearInterval(progressInterval);
+      showIdle(`Error: ${response.error}`);
     }
+    if (response?.cancelled) {
+      // partial data saved by background, polling will pick it up
+    }
+  });
+});
+
+stopBtn.addEventListener('click', () => {
+  chrome.runtime.sendMessage({ action: 'stop' });
+  progressLabel.textContent = 'Stopping...';
+  stopBtn.disabled = true;
+});
+
+clearDuringBtn.addEventListener('click', () => {
+  chrome.runtime.sendMessage({ action: 'clearData' }, () => {
+    showIdle('Data cleared');
+    viewBtn.disabled = true;
   });
 });
 
@@ -93,8 +107,7 @@ viewBtn.addEventListener('click', () => {
 
 clearBtn.addEventListener('click', () => {
   chrome.storage.local.clear(() => {
-    showIdle();
-    status.textContent = 'Data cleared';
+    showIdle('Data cleared');
     viewBtn.disabled = true;
   });
 });

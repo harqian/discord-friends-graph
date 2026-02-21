@@ -1,5 +1,7 @@
 // background service worker - handles token extraction and API calls
 
+let scanCancelled = false;
+
 // try to get token from discord's page context using multiple methods
 async function extractToken(tabId) {
   // discord tokens are long base64ish strings, usually 70+ chars
@@ -128,6 +130,8 @@ async function discordFetch(url, token) {
 
 // scan friends and their mutual connections
 async function scanFriends(tabId) {
+  scanCancelled = false;
+
   const token = await extractToken(tabId);
   if (!token) {
     return { error: 'Could not extract token. Make sure you are logged into Discord.' };
@@ -143,6 +147,17 @@ async function scanFriends(tabId) {
     const data = {};
 
     for (let i = 0; i < friends.length; i++) {
+      if (scanCancelled) {
+        console.log('[bg] scan cancelled at', i, '/', friends.length);
+        // save partial results
+        if (Object.keys(data).length > 0) {
+          await chrome.storage.local.set({ connections: data, scanProgress: null });
+        } else {
+          await chrome.storage.local.set({ scanProgress: null });
+        }
+        return { cancelled: true, partial: Object.keys(data).length };
+      }
+
       const friend = friends[i];
       const avatarUrl = friend.user.avatar
         ? `https://cdn.discordapp.com/avatars/${friend.user.id}/${friend.user.avatar}.png`
@@ -162,7 +177,6 @@ async function scanFriends(tabId) {
         );
         data[friend.user.id].connections = mutuals.map(m => m.id);
       } catch(e) {
-        // 403/429 on mutuals is expected sometimes, skip
         console.log('[bg] mutuals failed for', friend.user.username, e.message);
       }
 
@@ -189,7 +203,6 @@ async function scanFriends(tabId) {
 // handle messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'scan') {
-    // find discord tab
     chrome.tabs.query({ url: 'https://discord.com/*' }).then(tabs => {
       if (tabs.length === 0) {
         sendResponse({ error: 'Open Discord first' });
@@ -197,6 +210,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
       scanFriends(tabs[0].id).then(sendResponse);
     });
-    return true; // async
+    return true;
+  }
+
+  if (request.action === 'stop') {
+    scanCancelled = true;
+    sendResponse({ ok: true });
+  }
+
+  if (request.action === 'clearData') {
+    scanCancelled = true;
+    chrome.storage.local.clear(() => {
+      sendResponse({ ok: true });
+    });
+    return true;
   }
 });
