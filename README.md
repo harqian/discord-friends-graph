@@ -1,52 +1,80 @@
 # Discord Lattice
 
-Visualize your Discord friends network as an interactive graph. All data stays on your device.
+Discord Lattice is a Chrome extension that scans your Discord friends list and visualizes mutual connections as an interactive network graph.
+
+Everything runs locally in your browser. There is no backend and no build step.
+
+## Features
+
+- Scan your Discord friends list from your existing logged-in web session
+- Choose a scan limit before starting (useful for large friend lists)
+- Track scan progress and stop mid-scan if needed
+- Explore connections in a graph view with avatars and node highlighting
+- Clear stored data at any time
+
+## Quick Start
+
+1. Open `chrome://extensions`
+2. Enable **Developer mode**
+3. Click **Load unpacked**
+4. Select this repository folder
+5. Open `https://discord.com` and make sure you are logged in
+6. Click the extension icon:
+   1. **Scan Friends**
+   2. Pick how many friends to scan
+   3. **Start Scan**
+   4. **View Graph**
 
 ## How It Works
 
-1. Install the extension
-2. Open Discord in your browser
-3. Click the extension icon → "Scan Friends"
-4. Click "View Graph" to explore your network
+1. The popup asks the background service worker to start a scan.
+2. The service worker extracts your Discord auth token from the Discord tab context.
+3. It calls Discord API endpoints to fetch:
+   - your friend relationships
+   - each friend's relationships (for mutual edges)
+4. Results are written to `chrome.storage.local`.
+5. `graph.html` reads stored data and renders it with `vis-network`.
 
-## Privacy & Security
+## Privacy
 
-- **No servers** — all processing happens locally in your browser
-- **No token pasting** — uses your existing Discord session
-- **No data transmission** — nothing leaves your device
-- **Open source** — read every line of code yourself
+- No token pasting
+- No external server
+- No data upload by this extension
+- Data is stored only in `chrome.storage.local` on your machine
 
-### Verifying the code
+You can remove data anytime via **Clear Data** in the popup.
 
-After installing, you can verify the installed code matches this repo:
-
-```bash
-# find your extension's installed files
-# Chrome: ~/Library/Application Support/Google/Chrome/Default/Extensions/
-# look for the extension ID in chrome://extensions (enable Developer mode)
-
-# compare against this repo
-diff -r /path/to/installed/extension /path/to/this/repo
-```
-
-The extension has no build step — the JS files you see here are exactly what runs.
-
-## Permissions Explained
+## Permissions
 
 | Permission | Why |
 |---|---|
-| `storage` | Save your graph data locally |
-| `discord.com` | Run the scanner on Discord |
-| `cdn.discordapp.com` | Load avatar images |
+| `storage` | Save scan results and progress locally |
+| `scripting` | Execute token extraction logic in the Discord tab context |
+| `https://discord.com/*` | Access Discord pages and API endpoints |
+| `https://cdn.discordapp.com/*` | Display avatar images in the graph |
 
-## Development
+## Project Structure
 
-Load as unpacked extension:
-1. Go to `chrome://extensions`
-2. Enable "Developer mode"
-3. Click "Load unpacked"
-4. Select this folder
+- `manifest.json`: MV3 extension configuration
+- `background.js`: service worker for token extraction, API calls, scan orchestration
+- `popup.html` / `popup.css` / `popup.js`: extension popup UI and scan controls
+- `graph.html` / `graph.js`: graph page and rendering logic
+- `lib/vis-network.min.js`: graph visualization library
+- `icons/`: extension icons (`svg` source + generated `png`)
+
+## Development Notes
+
+- No package manager, no bundler, no transpiler
+- What you see in the repo is what Chrome runs
+- After code changes, click **Reload** on the extension in `chrome://extensions`
+
+## Troubleshooting
+
+- **"Open Discord first"**: Make sure a Discord tab is open at `https://discord.com/*`.
+- **Token extraction error**: Refresh Discord and try again.
+- **Graph missing data**: Run a new scan or clear old data and rescan.
+- **Icon updates not showing**: Reload the unpacked extension to bust Chrome icon cache.
 
 ## Disclaimer
 
-This uses Discord's undocumented API. Use at your own risk.
+This project uses undocumented Discord API behavior and may stop working if Discord changes internal implementation or endpoints. Use at your own risk and review the source before using.
