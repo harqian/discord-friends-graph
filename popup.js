@@ -18,20 +18,28 @@ const buttons = document.getElementById('buttons');
 
 let progressInterval = null;
 
+function stopProgressPolling() {
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+  }
+}
+
 function hideAll() {
   buttons.classList.add('hidden');
   confirmSection.classList.add('hidden');
   progressSection.classList.add('hidden');
-  clearInterval(progressInterval);
 }
 
 function showIdle(msg) {
+  stopProgressPolling();
   hideAll();
   buttons.classList.remove('hidden');
   if (msg) status.textContent = msg;
 }
 
 function showConfirm(count) {
+  stopProgressPolling();
   hideAll();
   confirmSection.classList.remove('hidden');
   confirmLabel.textContent = `Found ${count} friends`;
@@ -77,13 +85,14 @@ chrome.storage.local.get(['connections', 'scanProgress'], (result) => {
 });
 
 function startProgressPolling() {
+  stopProgressPolling();
   progressInterval = setInterval(() => {
     chrome.storage.local.get(['scanProgress', 'connections'], (result) => {
       if (result.scanProgress) {
         const { current, total } = result.scanProgress;
         showScanning(current, total);
       } else {
-        clearInterval(progressInterval);
+        stopProgressPolling();
         if (result.connections && Object.keys(result.connections).length > 0) {
           showDone(Object.keys(result.connections).length);
         } else {

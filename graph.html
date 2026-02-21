@@ -38,9 +38,26 @@
       margin-bottom: 4px;
     }
 
+    #info-card .tag {
+      font-size: 13px;
+      color: #b9bbbe;
+      margin-bottom: 10px;
+    }
+
     #info-card .stats {
       font-size: 13px;
       color: #b9bbbe;
+      margin-bottom: 12px;
+    }
+
+    #info-card .open-profile {
+      display: inline-block;
+      font-size: 13px;
+      color: #fff;
+      background: #5865f2;
+      text-decoration: none;
+      border-radius: 6px;
+      padding: 6px 10px;
     }
 
     #info-card .close {
@@ -118,7 +135,9 @@
     <button class="close">&times;</button>
     <img id="card-avatar" src="" alt="">
     <h2 id="card-username"></h2>
+    <p class="tag" id="card-tag"></p>
     <p class="stats" id="card-stats"></p>
+    <a id="card-open" class="open-profile" href="#" target="_blank" rel="noopener noreferrer">Open Profile</a>
   </div>
   <script src="lib/vis-network.min.js"></script>
   <script src="graph.js"></script>

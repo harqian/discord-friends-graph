@@ -59,29 +59,20 @@ const loadingEl = document.getElementById('loading');
 const loadingTextEl = document.getElementById('loading-text');
 const defaultAvatarUrl = 'https://cdn.discordapp.com/embed/avatars/0.png';
 
-function escapeHtml(text) {
-  return String(text ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
 function getDisplayName(friend) {
-  return friend.displayName || friend.globalName || friend.username || 'Unknown User';
-}
-
-function getTag(friend) {
-  if (friend.tag) return friend.tag;
-  if (friend.discriminator && friend.discriminator !== '0') {
-    return `${friend.username}#${friend.discriminator}`;
-  }
-  return `@${friend.username}`;
+  return friend.displayName || friend.globalName || friend.global_name || friend.username || 'Unknown User';
 }
 
 function getProfileUrl(friend) {
   return friend.profileUrl || `https://discord.com/users/${friend.id}`;
+}
+
+function normalizeId(id) {
+  return String(id);
+}
+
+function formatConnectionCount(count) {
+  return `${count} connection${count === 1 ? '' : 's'}`;
 }
 
 function setLoadingText(text) {
@@ -114,20 +105,22 @@ async function loadGraph() {
       const id = ids[i];
       const friend = connections[id];
       const displayName = getDisplayName(friend);
-      const tag = getTag(friend);
+      const connectionCount = friend.connections.filter(
+        (mutualId) => connections[normalizeId(mutualId)]
+      ).length;
 
       data.nodes.push({
-        id: Number(id),
+        id: id,
         image: friend.avatarUrl || defaultAvatarUrl,
         label: displayName,
-        title: `${escapeHtml(displayName)}\n${escapeHtml(tag)}`
+        title: `${displayName} - ${formatConnectionCount(connectionCount)}`
       });
 
       // add edges for mutuals (dedupe by sorting ids)
       friend.connections.forEach(mutualId => {
         // only add edge if mutual is also in our friends list
         if (connections[mutualId]) {
-          const edge = [id, mutualId].sort((a, b) => Number(a) - Number(b)).join('-');
+          const edge = [normalizeId(id), normalizeId(mutualId)].sort().join('-');
           links.add(edge);
         }
       });
@@ -141,7 +134,7 @@ async function loadGraph() {
     setLoadingText(`Building edges... ${links.size} found`);
     links.forEach(link => {
       const [from, to] = link.split('-');
-      data.edges.push({ from: Number(from), to: Number(to) });
+      data.edges.push({ from: from, to: to });
     });
 
     setLoadingText(`Rendering graph... ${data.nodes.length} nodes, ${data.edges.length} edges`);
@@ -173,13 +166,28 @@ async function loadGraph() {
         hideInfoCard();
       }
     });
+
+    network.on('hoverNode', () => {
+      container.style.cursor = 'pointer';
+    });
+
+    network.on('blurNode', () => {
+      container.style.cursor = 'default';
+    });
+
+    network.on('doubleClick', (params) => {
+      if (params.nodes.length === 0) return;
+      const friend = connectionsData[normalizeId(params.nodes[0])];
+      if (!friend) return;
+      window.open(getProfileUrl(friend), '_blank', 'noopener,noreferrer');
+    });
   } catch (err) {
     setLoadingText(`Failed to load graph: ${err.message}`);
   }
 }
 
 function showInfoCard(nodeId) {
-  const friend = connectionsData[nodeId];
+  const friend = connectionsData[normalizeId(nodeId)];
   if (!friend) return;
 
   // count how many mutuals are also in our network
@@ -191,8 +199,8 @@ function showInfoCard(nodeId) {
     e.currentTarget.src = defaultAvatarUrl;
   };
   document.getElementById('card-username').textContent = getDisplayName(friend);
-  document.getElementById('card-tag').textContent = getTag(friend);
-  document.getElementById('card-stats').textContent = `${mutualCount} mutual connections`;
+  document.getElementById('card-tag').textContent = formatConnectionCount(mutualCount);
+  document.getElementById('card-stats').textContent = '';
   document.getElementById('card-open').href = getProfileUrl(friend);
 
   document.getElementById('info-card').classList.add('visible');
@@ -207,20 +215,20 @@ function hideInfoCard() {
 }
 
 function highlightConnections(nodeId) {
-  const friend = connectionsData[nodeId];
+  const normalizedNodeId = normalizeId(nodeId);
+  const friend = connectionsData[normalizedNodeId];
   if (!friend) return;
 
-  const connectedIds = new Set(friend.connections.map(id => parseInt(id)));
-  connectedIds.add(Number(nodeId));
+  const connectedIds = new Set(friend.connections.map(normalizeId));
+  connectedIds.add(normalizedNodeId);
 
   // dim nodes not connected
   const updates = [];
   for (const id in connectionsData) {
-    const nid = Number(id);
-    if (connectedIds.has(nid)) {
-      updates.push({ id: nid, opacity: 1.0 });
+    if (connectedIds.has(id)) {
+      updates.push({ id: id, opacity: 1.0 });
     } else {
-      updates.push({ id: nid, opacity: 0.15 });
+      updates.push({ id: id, opacity: 0.15 });
     }
   }
 
@@ -230,7 +238,7 @@ function highlightConnections(nodeId) {
 function resetHighlight() {
   const updates = [];
   for (const id in connectionsData) {
-    updates.push({ id: Number(id), opacity: 1.0 });
+    updates.push({ id: id, opacity: 1.0 });
   }
   network.body.data.nodes.update(updates);
 }

@@ -132,6 +132,29 @@ async function discordFetch(url, token) {
 let cachedToken = null;
 let cachedFriends = null;
 
+function getDefaultAvatarIndex(userId) {
+  try {
+    // Snowflakes can overflow Number bitwise ops; keep this in BigInt space.
+    return Number((BigInt(userId) >> 22n) % 6n);
+  } catch {
+    return 0;
+  }
+}
+
+function getAvatarUrl(user) {
+  if (user.avatar) {
+    return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`;
+  }
+  return `https://cdn.discordapp.com/embed/avatars/${getDefaultAvatarIndex(user.id)}.png`;
+}
+
+function getUserTag(user) {
+  if (user.discriminator && user.discriminator !== '0') {
+    return `${user.username}#${user.discriminator}`;
+  }
+  return `@${user.username}`;
+}
+
 async function getFriendCount(tabId) {
   const token = await extractToken(tabId);
   if (!token) return { error: 'Could not extract token. Make sure you are logged into Discord.' };
@@ -197,14 +220,19 @@ async function scanFriends(tabId, limit) {
       }
 
       const friend = friends[i];
-      const avatarUrl = friend.user.avatar
-        ? `https://cdn.discordapp.com/avatars/${friend.user.id}/${friend.user.avatar}.png`
-        : `https://cdn.discordapp.com/embed/avatars/${(parseInt(friend.user.id) >> 22) % 6}.png`;
+      const avatarUrl = getAvatarUrl(friend.user);
+      const tag = getUserTag(friend.user);
+      const displayName = friend.user.global_name || friend.user.username;
 
       data[friend.user.id] = {
         username: friend.user.username,
+        tag,
+        displayName,
+        globalName: friend.user.global_name || null,
+        discriminator: friend.user.discriminator || null,
         avatarUrl,
         id: friend.user.id,
+        profileUrl: `https://discord.com/users/${friend.user.id}`,
         connections: []
       };
 
