@@ -10,12 +10,24 @@
     <h1>Discord Lattice</h1>
     <p id="status">Open Discord to scan your friends network</p>
 
+    <div id="confirm-section" class="hidden">
+      <div id="confirm-label"></div>
+      <div id="limit-row">
+        <label for="limit-input">Scan</label>
+        <input type="number" id="limit-input" min="1">
+        <span id="limit-total"></span>
+      </div>
+      <button id="start-scan">Start Scan</button>
+      <button id="cancel-confirm">Back</button>
+    </div>
+
     <div id="progress-section" class="hidden">
       <div id="progress-label">Scanning friends...</div>
       <div id="progress-bar-bg">
         <div id="progress-bar-fill"></div>
       </div>
       <div id="progress-count">0 / ?</div>
+      <p id="bg-note">Scan continues even if you close this popup.</p>
       <div id="scan-actions">
         <button id="stop">Stop Scan</button>
         <button id="clear-during-scan">Clear Data</button>

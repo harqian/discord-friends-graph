@@ -3,6 +3,12 @@ const viewBtn = document.getElementById('view');
 const clearBtn = document.getElementById('clear');
 const stopBtn = document.getElementById('stop');
 const clearDuringBtn = document.getElementById('clear-during-scan');
+const startScanBtn = document.getElementById('start-scan');
+const cancelConfirmBtn = document.getElementById('cancel-confirm');
+const limitInput = document.getElementById('limit-input');
+const limitTotal = document.getElementById('limit-total');
+const confirmSection = document.getElementById('confirm-section');
+const confirmLabel = document.getElementById('confirm-label');
 const status = document.getElementById('status');
 const progressSection = document.getElementById('progress-section');
 const progressLabel = document.getElementById('progress-label');
@@ -12,9 +18,34 @@ const buttons = document.getElementById('buttons');
 
 let progressInterval = null;
 
+function hideAll() {
+  buttons.classList.add('hidden');
+  confirmSection.classList.add('hidden');
+  progressSection.classList.add('hidden');
+  clearInterval(progressInterval);
+}
+
+function showIdle(msg) {
+  hideAll();
+  buttons.classList.remove('hidden');
+  if (msg) status.textContent = msg;
+}
+
+function showConfirm(count) {
+  hideAll();
+  confirmSection.classList.remove('hidden');
+  confirmLabel.textContent = `Found ${count} friends`;
+  limitInput.value = count;
+  limitInput.max = count;
+  limitTotal.textContent = `of ${count}`;
+  status.textContent = 'How many friends to scan?';
+}
+
 function showScanning(current, total) {
+  hideAll();
   progressSection.classList.remove('hidden');
   buttons.classList.add('hidden');
+  stopBtn.disabled = false;
   status.textContent = 'Scanning in progress...';
 
   if (total) {
@@ -27,13 +58,6 @@ function showScanning(current, total) {
     progressCount.textContent = '0 / ?';
     progressLabel.textContent = 'Starting scan...';
   }
-}
-
-function showIdle(msg) {
-  progressSection.classList.add('hidden');
-  buttons.classList.remove('hidden');
-  clearInterval(progressInterval);
-  if (msg) status.textContent = msg;
 }
 
 function showDone(count) {
@@ -70,11 +94,32 @@ function startProgressPolling() {
   }, 500);
 }
 
+// step 1: user clicks scan, we fetch count
 scanBtn.addEventListener('click', () => {
+  scanBtn.disabled = true;
+  status.textContent = 'Checking friends list...';
+
+  chrome.runtime.sendMessage({ action: 'count' }, (response) => {
+    scanBtn.disabled = false;
+    if (chrome.runtime.lastError) {
+      status.textContent = 'Error: Refresh Discord and try again';
+      return;
+    }
+    if (response?.error) {
+      status.textContent = `Error: ${response.error}`;
+      return;
+    }
+    showConfirm(response.count);
+  });
+});
+
+// step 2: user picks limit and starts
+startScanBtn.addEventListener('click', () => {
+  const limit = parseInt(limitInput.value) || parseInt(limitInput.max);
   showScanning(0, null);
   startProgressPolling();
 
-  chrome.runtime.sendMessage({ action: 'scan' }, (response) => {
+  chrome.runtime.sendMessage({ action: 'scan', limit }, (response) => {
     if (chrome.runtime.lastError) {
       showIdle('Error: Refresh Discord and try again');
       return;
@@ -82,10 +127,11 @@ scanBtn.addEventListener('click', () => {
     if (response?.error) {
       showIdle(`Error: ${response.error}`);
     }
-    if (response?.cancelled) {
-      // partial data saved by background, polling will pick it up
-    }
   });
+});
+
+cancelConfirmBtn.addEventListener('click', () => {
+  showIdle('Open Discord to scan your friends network');
 });
 
 stopBtn.addEventListener('click', () => {

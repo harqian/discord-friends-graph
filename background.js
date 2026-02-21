@@ -128,21 +128,59 @@ async function discordFetch(url, token) {
   return res.json();
 }
 
-// scan friends and their mutual connections
-async function scanFriends(tabId) {
-  scanCancelled = false;
+// just get friend count + cache the token/list for immediate scan
+let cachedToken = null;
+let cachedFriends = null;
 
+async function getFriendCount(tabId) {
   const token = await extractToken(tabId);
-  if (!token) {
-    return { error: 'Could not extract token. Make sure you are logged into Discord.' };
-  }
+  if (!token) return { error: 'Could not extract token. Make sure you are logged into Discord.' };
 
   try {
     const relationships = await discordFetch(
       'https://discord.com/api/v9/users/@me/relationships', token
     );
     const friends = relationships.filter(r => r.type === 1);
-    console.log('[bg] found', friends.length, 'friends');
+    // cache so scan doesn't re-fetch
+    cachedToken = token;
+    cachedFriends = friends;
+    return { count: friends.length };
+  } catch(e) {
+    return { error: e.message };
+  }
+}
+
+// scan friends and their mutual connections
+async function scanFriends(tabId, limit) {
+  scanCancelled = false;
+
+  // use cached data from count step if available, otherwise fetch fresh
+  let token = cachedToken;
+  let friends = cachedFriends;
+  cachedToken = null;
+  cachedFriends = null;
+
+  if (!token) {
+    token = await extractToken(tabId);
+    if (!token) {
+      return { error: 'Could not extract token. Make sure you are logged into Discord.' };
+    }
+  }
+
+  try {
+    if (!friends) {
+      const relationships = await discordFetch(
+        'https://discord.com/api/v9/users/@me/relationships', token
+      );
+      friends = relationships.filter(r => r.type === 1);
+    }
+
+    // apply limit
+    const total = friends.length;
+    if (limit && limit < friends.length) {
+      friends = friends.slice(0, limit);
+    }
+    console.log('[bg] scanning', friends.length, 'of', total, 'friends');
 
     const data = {};
 
@@ -180,7 +218,6 @@ async function scanFriends(tabId) {
         console.log('[bg] mutuals failed for', friend.user.username, e.message);
       }
 
-      // progress update
       await chrome.storage.local.set({
         scanProgress: { current: i + 1, total: friends.length }
       });
@@ -202,13 +239,24 @@ async function scanFriends(tabId) {
 
 // handle messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'count') {
+    chrome.tabs.query({ url: 'https://discord.com/*' }).then(tabs => {
+      if (tabs.length === 0) {
+        sendResponse({ error: 'Open Discord first' });
+        return;
+      }
+      getFriendCount(tabs[0].id).then(sendResponse);
+    });
+    return true;
+  }
+
   if (request.action === 'scan') {
     chrome.tabs.query({ url: 'https://discord.com/*' }).then(tabs => {
       if (tabs.length === 0) {
         sendResponse({ error: 'Open Discord first' });
         return;
       }
-      scanFriends(tabs[0].id).then(sendResponse);
+      scanFriends(tabs[0].id, request.limit).then(sendResponse);
     });
     return true;
   }

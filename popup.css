@@ -91,6 +91,85 @@ h1 {
   font-size: 13px;
 }
 
+/* background note */
+#bg-note {
+  font-size: 11px;
+  color: #72767d;
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* confirm / limit picker */
+#confirm-section {
+  margin-bottom: 12px;
+}
+
+#confirm-section.hidden {
+  display: none;
+}
+
+#confirm-label {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+#limit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+#limit-row label {
+  font-size: 13px;
+  color: #b9bbbe;
+}
+
+#limit-input {
+  width: 70px;
+  padding: 6px 8px;
+  border: 1px solid #4f545c;
+  border-radius: 4px;
+  background: #202225;
+  color: #dcddde;
+  font-size: 14px;
+  text-align: center;
+}
+
+#limit-input:focus {
+  outline: none;
+  border-color: #5865f2;
+}
+
+#limit-total {
+  font-size: 13px;
+  color: #72767d;
+}
+
+#start-scan {
+  width: 100%;
+  background: #5865f2;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+#start-scan:hover {
+  background: #4752c4;
+}
+
+#cancel-confirm {
+  width: 100%;
+  background: transparent;
+  color: #b9bbbe;
+  border: 1px solid #4f545c;
+}
+
+#cancel-confirm:hover {
+  background: rgba(79, 84, 92, 0.2);
+}
+
 /* buttons */
 #buttons {
   display: flex;
