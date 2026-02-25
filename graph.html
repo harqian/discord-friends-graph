@@ -19,45 +19,87 @@
       color: #dcddde;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      max-width: 260px;
+      max-width: 320px;
+      max-height: calc(100vh - 32px);
+      overflow: hidden;
       z-index: 1000;
     }
 
     #info-card.visible { display: block; }
 
-    #info-card img {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      margin-bottom: 12px;
-    }
-
-    #info-card h2 {
-      font-size: 16px;
-      color: #fff;
-      margin-bottom: 4px;
-    }
-
-    #info-card .tag {
-      font-size: 13px;
+    #card-selection-title {
+      font-size: 12px;
       color: #b9bbbe;
       margin-bottom: 10px;
+      padding-right: 24px;
     }
 
-    #info-card .stats {
-      font-size: 13px;
+    #card-profiles {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: calc(100vh - 96px);
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .card-profile {
+      background: #25272b;
+      border: 1px solid #3a3d43;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .card-profile-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .card-profile-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex: 0 0 auto;
+    }
+
+    .card-profile-name-wrap {
+      min-width: 0;
+    }
+
+    .card-profile-name {
+      font-size: 14px;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-profile-tag {
+      font-size: 12px;
       color: #b9bbbe;
-      margin-bottom: 12px;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    #info-card .open-profile {
+    .card-profile-stats {
+      font-size: 12px;
+      color: #b9bbbe;
+      margin-bottom: 8px;
+    }
+
+    .card-profile .open-profile {
       display: inline-block;
-      font-size: 13px;
+      font-size: 12px;
       color: #fff;
       background: #5865f2;
       text-decoration: none;
       border-radius: 6px;
-      padding: 6px 10px;
+      padding: 5px 9px;
     }
 
     #info-card .close {
@@ -272,11 +314,8 @@
   </div>
   <div id="info-card">
     <button class="close">&times;</button>
-    <img id="card-avatar" src="" alt="">
-    <h2 id="card-username"></h2>
-    <p class="tag" id="card-tag"></p>
-    <p class="stats" id="card-stats"></p>
-    <a id="card-open" class="open-profile" href="#" target="_blank" rel="noopener noreferrer">Open Profile</a>
+    <div id="card-selection-title"></div>
+    <div id="card-profiles"></div>
   </div>
   <script src="lib/vis-network.min.js"></script>
   <script src="graph.js"></script>

@@ -6,7 +6,7 @@ const options = {
     barnesHut: {
       theta: 0.5,
       // Pull nodes into a tighter cluster (less repulsion + shorter springs).
-      gravitationalConstant: -200,
+      gravitationalConstant: -500,
       centralGravity: 0.5,
       springLength: 200,
       springConstant: 0.01,
@@ -29,7 +29,7 @@ const options = {
     clusterThreshold: 50
   },
   nodes: {
-    borderWidth: 5,
+    borderWidth: 1,
     size: 15,
     color: {
       border: '#212121',
@@ -47,8 +47,9 @@ const options = {
   },
   edges: {
     color: { color: '#444', highlight: '#5865f2' },
-    width: 1,
-    chosen: false
+    width: 0.2,
+    chosen: false,
+    smooth: true
   },
   interaction: {
     hover: true,
@@ -69,6 +70,7 @@ const searchEmptyEl = document.getElementById('search-empty');
 let searchIndex = [];
 let searchResults = [];
 let activeResultIndex = 0;
+let selectedNodeIds = [];
 
 function getDisplayName(friend) {
   return friend.displayName || friend.globalName || friend.global_name || friend.username || 'Unknown User';
@@ -242,12 +244,7 @@ function selectSearchResult(id) {
   if (!network || !connectionsData) return;
   const normalizedId = normalizeId(id);
   closeSearch();
-  network.selectNodes([normalizedId]);
-  network.focus(normalizedId, {
-    scale: Math.max(network.getScale(), 0.65),
-    animation: { duration: 350, easingFunction: 'easeInOutQuad' }
-  });
-  showInfoCard(normalizedId);
+  addSelection(normalizedId, true);
 }
 
 function isSearchOpen() {
@@ -339,16 +336,16 @@ async function loadGraph() {
     // click handler for info card
     network.on('click', (params) => {
       if (params.nodes.length > 0) {
-        showInfoCard(params.nodes[0]);
+        addSelection(params.nodes[0], false, true);
       } else {
-        hideInfoCard();
+        clearSelections();
       }
     });
 
     // Keep edge clicks from producing a selected state.
     network.on('selectEdge', () => {
       network.unselectAll();
-      hideInfoCard();
+      if (selectedNodeIds.length > 0) network.selectNodes(selectedNodeIds, false);
     });
 
     network.on('hoverNode', () => {
@@ -370,66 +367,198 @@ async function loadGraph() {
   }
 }
 
-function showInfoCard(nodeId) {
-  const friend = connectionsData[normalizeId(nodeId)];
-  if (!friend) return;
+function getNetworkMutualCount(friend) {
+  const ids = Array.isArray(friend.connections) ? friend.connections : [];
+  return ids.filter((id) => connectionsData[normalizeId(id)]).length;
+}
 
-  // count how many mutuals are also in our network
-  const mutualCount = friend.connections.filter(id => connectionsData[id]).length;
+function createProfileCard(friend) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'card-profile';
 
-  document.getElementById('card-avatar').src = friend.avatarUrl || defaultAvatarUrl;
-  document.getElementById('card-avatar').onerror = (e) => {
+  const header = document.createElement('div');
+  header.className = 'card-profile-header';
+
+  const avatar = document.createElement('img');
+  avatar.className = 'card-profile-avatar';
+  avatar.src = friend.avatarUrl || defaultAvatarUrl;
+  avatar.alt = '';
+  avatar.onerror = (e) => {
     e.currentTarget.onerror = null;
     e.currentTarget.src = defaultAvatarUrl;
   };
-  document.getElementById('card-username').textContent = getDisplayName(friend);
-  document.getElementById('card-tag').textContent = formatConnectionCount(mutualCount);
-  document.getElementById('card-stats').textContent = formatServerNicknames(friend);
-  document.getElementById('card-open').href = getProfileUrl(friend);
+
+  const nameWrap = document.createElement('div');
+  nameWrap.className = 'card-profile-name-wrap';
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'card-profile-name';
+  nameEl.textContent = getDisplayName(friend);
+
+  const tagEl = document.createElement('div');
+  tagEl.className = 'card-profile-tag';
+  tagEl.textContent = friend.tag || '';
+
+  nameWrap.appendChild(nameEl);
+  nameWrap.appendChild(tagEl);
+  header.appendChild(avatar);
+  header.appendChild(nameWrap);
+
+  const statsEl = document.createElement('div');
+  statsEl.className = 'card-profile-stats';
+  const mutualCount = getNetworkMutualCount(friend);
+  const nickLine = formatServerNicknames(friend);
+  statsEl.textContent = nickLine
+    ? `${formatConnectionCount(mutualCount)} | ${nickLine}`
+    : formatConnectionCount(mutualCount);
+
+  const openEl = document.createElement('a');
+  openEl.className = 'open-profile';
+  openEl.href = getProfileUrl(friend);
+  openEl.target = '_blank';
+  openEl.rel = 'noopener noreferrer';
+  openEl.textContent = 'Open Profile';
+
+  wrapper.appendChild(header);
+  wrapper.appendChild(statsEl);
+  wrapper.appendChild(openEl);
+  return wrapper;
+}
+
+function showInfoCard(nodeIds) {
+  const ids = Array.isArray(nodeIds) ? nodeIds : [nodeIds];
+  const normalizedIds = ids.map(normalizeId).filter((id) => connectionsData[id]);
+  if (normalizedIds.length === 0) return;
+
+  const titleEl = document.getElementById('card-selection-title');
+  const profilesEl = document.getElementById('card-profiles');
+
+  titleEl.textContent = `${normalizedIds.length} selected`;
+  profilesEl.innerHTML = '';
+
+  normalizedIds.forEach((id) => {
+    const friend = connectionsData[id];
+    if (!friend) return;
+    profilesEl.appendChild(createProfileCard(friend));
+  });
 
   document.getElementById('info-card').classList.add('visible');
-
-  // highlight this node's connections
-  highlightConnections(nodeId);
 }
 
 function hideInfoCard() {
   document.getElementById('info-card').classList.remove('visible');
-  resetHighlight();
 }
 
-function highlightConnections(nodeId) {
-  const normalizedNodeId = normalizeId(nodeId);
-  const friend = connectionsData[normalizedNodeId];
-  if (!friend) return;
+function getFriendConnectionSet(nodeId) {
+  const friend = connectionsData[normalizeId(nodeId)];
+  if (!friend) return new Set();
+  const ids = Array.isArray(friend.connections) ? friend.connections : [];
+  const set = new Set();
+  ids.forEach((id) => {
+    const normalizedId = normalizeId(id);
+    if (connectionsData[normalizedId]) set.add(normalizedId);
+  });
+  return set;
+}
 
-  const connectedIds = new Set(friend.connections.map(normalizeId));
-  connectedIds.add(normalizedNodeId);
+function getSharedMutuals(nodeIds) {
+  if (!Array.isArray(nodeIds) || nodeIds.length === 0) return new Set();
+  let shared = null;
 
-  // dim nodes not connected
+  nodeIds.forEach((nodeId) => {
+    const current = getFriendConnectionSet(nodeId);
+    if (shared === null) {
+      shared = current;
+      return;
+    }
+    shared = new Set([...shared].filter((id) => current.has(id)));
+  });
+
+  return shared || new Set();
+}
+
+function highlightConnections() {
+  if (!connectionsData || !network) return;
+
+  const selectedSet = new Set(selectedNodeIds.map(normalizeId));
+  const sharedMutuals = getSharedMutuals(selectedNodeIds);
+  const visibleSet = new Set([...selectedSet, ...sharedMutuals]);
+
   const updates = [];
   for (const id in connectionsData) {
-    if (connectedIds.has(id)) {
-      updates.push({ id: id, opacity: 1.0 });
-    } else {
-      updates.push({ id: id, opacity: 0.15 });
-    }
+    updates.push({ id: id, opacity: visibleSet.has(id) ? 1.0 : 0.12 });
   }
-
   network.body.data.nodes.update(updates);
 
-  // Emphasize only edges connected to the selected node.
   const edgeUpdates = [];
   const edges = network.body.data.edges.get();
   for (const edge of edges) {
-    const isConnected = edge.from === normalizedNodeId || edge.to === normalizedNodeId;
+    const keepEdge = visibleSet.has(edge.from) && visibleSet.has(edge.to);
     edgeUpdates.push({
       id: edge.id,
-      color: isConnected ? '#5865f2' : 'rgba(68, 68, 68, 0.08)',
-      width: isConnected ? 2 : 1
+      color: keepEdge ? '#5865f2' : 'rgba(68, 68, 68, 0.08)',
+      width: keepEdge ? 2 : 1
     });
   }
   network.body.data.edges.update(edgeUpdates);
+}
+
+function renderSelections() {
+  if (!network) return;
+
+  if (selectedNodeIds.length === 0) {
+    network.unselectAll();
+    hideInfoCard();
+    resetHighlight();
+    return;
+  }
+
+  network.selectNodes(selectedNodeIds, false);
+  highlightConnections();
+  showInfoCard(selectedNodeIds);
+}
+
+function addSelection(nodeId, shouldFocus = false, toggleIfExists = false) {
+  const normalizedNodeId = normalizeId(nodeId);
+  if (!connectionsData[normalizedNodeId]) return;
+
+  const existingIndex = selectedNodeIds.indexOf(normalizedNodeId);
+  if (existingIndex >= 0) {
+    if (toggleIfExists) {
+      selectedNodeIds.splice(existingIndex, 1);
+      renderSelections();
+      return;
+    }
+    selectedNodeIds.splice(existingIndex, 1);
+  }
+  selectedNodeIds.push(normalizedNodeId);
+
+  if (shouldFocus && network) {
+    network.focus(normalizedNodeId, {
+      scale: Math.max(network.getScale(), 0.65),
+      animation: { duration: 350, easingFunction: 'easeInOutQuad' }
+    });
+  }
+
+  renderSelections();
+}
+
+function popSelection() {
+  if (selectedNodeIds.length === 0) return false;
+  selectedNodeIds.pop();
+  renderSelections();
+  return true;
+}
+
+function clearSelections() {
+  if (selectedNodeIds.length === 0) {
+    hideInfoCard();
+    resetHighlight();
+    if (network) network.unselectAll();
+    return;
+  }
+  selectedNodeIds = [];
+  renderSelections();
 }
 
 function resetHighlight() {
@@ -450,7 +579,7 @@ function resetHighlight() {
 }
 
 // close button for info card
-document.querySelector('#info-card .close').addEventListener('click', hideInfoCard);
+document.querySelector('#info-card .close').addEventListener('click', clearSelections);
 
 // Esc clears active selection/highlight.
 document.addEventListener('keydown', (event) => {
@@ -505,6 +634,8 @@ document.addEventListener('keydown', (event) => {
   }
 
   if (event.key !== 'Escape') return;
+  event.preventDefault();
+  if (popSelection()) return;
   if (network) network.unselectAll();
   hideInfoCard();
 });
