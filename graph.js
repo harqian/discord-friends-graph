@@ -47,11 +47,13 @@ const options = {
   },
   edges: {
     color: { color: '#444', highlight: '#5865f2' },
-    width: 0
+    width: 0,
+    chosen: false
   },
   interaction: {
     hover: true,
-    tooltipDelay: 100
+    tooltipDelay: 100,
+    selectConnectedEdges: false
   }
 };
 
@@ -165,6 +167,12 @@ async function loadGraph() {
       } else {
         hideInfoCard();
       }
+    });
+
+    // Keep edge clicks from producing a selected state.
+    network.on('selectEdge', () => {
+      network.unselectAll();
+      hideInfoCard();
     });
 
     network.on('hoverNode', () => {
