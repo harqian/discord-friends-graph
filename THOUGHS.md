@@ -10,3 +10,4 @@ for combined selections, at least add option of instead of "or", "and"; maybe ma
 how to make them bigger by # of mutuals but not clutter (and hopefully take up physical space) 
 esc to get out of current selection
 tell user that you gotta zoom in to see names
+i dont really want to be able to select edges

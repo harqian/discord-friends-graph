@@ -4,19 +4,21 @@ const options = {
   physics: {
     enabled: true,
     barnesHut: {
-      theta: 1,
+      theta: 0.5,
       // Pull nodes into a tighter cluster (less repulsion + shorter springs).
-      gravitationalConstant: -2000,
-      centralGravity: 1.5,
-      springLength: 140,
-      springConstant: 0.04,
-      damping: 0.24,
+      gravitationalConstant: -200,
+      centralGravity: 0.9,
+      springLength: 200,
+      springConstant: 0.01,
+      damping: 0.15,
+      // Keep circular avatars from occupying the same space.
+      // 0 disables collision handling; 1 uses full node size for spacing.
       avoidOverlap: 0
     },
     stabilization: {
-      enabled: true,
-      iterations: 800,
-      updateInterval: 10,
+      enabled: false,
+      iterations: 1000,
+      updateInterval: 50,
       fit: true
     },
     adaptiveTimestep: true
@@ -28,7 +30,7 @@ const options = {
   },
   nodes: {
     borderWidth: 5,
-    size: 45,
+    size: 15,
     color: {
       border: '#212121',
       background: '#666666'
@@ -45,7 +47,7 @@ const options = {
   },
   edges: {
     color: { color: '#444', highlight: '#5865f2' },
-    width: 1
+    width: 0
   },
   interaction: {
     hover: true,
@@ -149,8 +151,6 @@ async function loadGraph() {
       });
 
       network.once('stabilizationIterationsDone', () => {
-        // Freeze layout once stabilized for better runtime performance.
-        network.setOptions({ physics: { enabled: false } });
         setLoadingText('Stabilizing layout... 100%');
         hideLoading();
       });
