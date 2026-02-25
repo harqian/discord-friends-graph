@@ -207,11 +207,8 @@ function renderSearchResults() {
     textWrap.appendChild(metaEl);
     li.appendChild(avatar);
     li.appendChild(textWrap);
-    li.addEventListener('mouseenter', () => {
-      activeResultIndex = idx;
-      renderSearchResults();
-    });
     li.addEventListener('click', () => {
+      activeResultIndex = idx;
       selectSearchResult(item.id);
     });
     searchResultsEl.appendChild(li);
