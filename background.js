@@ -224,26 +224,38 @@ async function scanFriends(tabId, limit) {
     if (limit && limit < friends.length) {
       friends = friends.slice(0, limit);
     }
-    console.log('[bg] scanning', friends.length, 'of', total, 'friends');
-    await chrome.storage.local.set({
-      scanProgress: { current: 0, total: friends.length }
-    });
+    const existing = await chrome.storage.local.get(['connections']);
+    const existingConnections = existing.connections && typeof existing.connections === 'object'
+      ? existing.connections
+      : {};
+    const friendsToScan = friends.filter((friend) => !existingConnections[friend.user.id]);
 
-    const data = {};
+    console.log(
+      '[bg] scanning',
+      friendsToScan.length,
+      'new of',
+      friends.length,
+      'selected (',
+      total,
+      'total friends )'
+    );
+    await chrome.storage.local.set({ scanProgress: { current: 0, total: friendsToScan.length } });
 
-    for (let i = 0; i < friends.length; i++) {
+    const data = { ...existingConnections };
+
+    if (friendsToScan.length === 0) {
+      await chrome.storage.local.set({ scanProgress: null });
+      return { data, scanned: 0, skipped: friends.length };
+    }
+
+    for (let i = 0; i < friendsToScan.length; i++) {
       if (scanCancelled) {
-        console.log('[bg] scan cancelled at', i, '/', friends.length);
-        // save partial results
-        if (Object.keys(data).length > 0) {
-          await chrome.storage.local.set({ connections: data, scanProgress: null });
-        } else {
-          await chrome.storage.local.set({ scanProgress: null });
-        }
-        return { cancelled: true, partial: Object.keys(data).length };
+        console.log('[bg] scan cancelled at', i, '/', friendsToScan.length);
+        await chrome.storage.local.set({ connections: data, scanProgress: null });
+        return { cancelled: true, partial: i, scanned: i, skipped: friends.length - friendsToScan.length };
       }
 
-      const friend = friends[i];
+      const friend = friendsToScan[i];
       const avatarUrl = getAvatarUrl(friend.user);
       const tag = getUserTag(friend.user);
       const displayName = friend.user.global_name || friend.user.username;
@@ -280,18 +292,22 @@ async function scanFriends(tabId, limit) {
       }
 
       await chrome.storage.local.set({
-        scanProgress: { current: i + 1, total: friends.length }
+        scanProgress: { current: i + 1, total: friendsToScan.length }
       });
 
       // rate limit - 1 req/sec
-      if (i < friends.length - 1) {
+      if (i < friendsToScan.length - 1) {
         await new Promise(r => setTimeout(r, 1000));
       }
     }
 
     // save results, clear progress
     await chrome.storage.local.set({ connections: data, scanProgress: null });
-    return { data };
+    return {
+      data,
+      scanned: friendsToScan.length,
+      skipped: friends.length - friendsToScan.length
+    };
   } catch(e) {
     console.log('[bg] scan error:', e.message);
     await chrome.storage.local.set({ scanProgress: null });
