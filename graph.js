@@ -7,7 +7,7 @@ const options = {
       theta: 0.5,
       // Pull nodes into a tighter cluster (less repulsion + shorter springs).
       gravitationalConstant: -200,
-      centralGravity: 0.9,
+      centralGravity: 0.5,
       springLength: 200,
       springConstant: 0.01,
       damping: 0.15,
