@@ -18,6 +18,20 @@ const progressCount = document.getElementById('progress-count');
 const buttons = document.getElementById('buttons');
 
 let progressInterval = null;
+const APPROX_SECONDS_PER_FRIEND = 1.25;
+
+function formatDuration(seconds) {
+  const clamped = Math.max(0, Math.round(seconds));
+  const mins = Math.floor(clamped / 60);
+  const secs = clamped % 60;
+  if (mins === 0) return `${secs}s`;
+  if (secs === 0) return `${mins}m`;
+  return `${mins}m ${secs}s`;
+}
+
+function getEstimatedSeconds(total) {
+  return total * APPROX_SECONDS_PER_FRIEND;
+}
 
 function stopProgressPolling() {
   if (progressInterval) {
@@ -47,7 +61,8 @@ function showConfirm(count) {
   limitInput.value = count;
   limitInput.max = count;
   limitTotal.textContent = `of ${count}`;
-  status.textContent = 'How many friends to scan?';
+  const estimate = formatDuration(getEstimatedSeconds(count));
+  status.textContent = `How many friends to scan? Approx: ${estimate}`;
 }
 
 function showScanning(current, total) {
@@ -59,9 +74,13 @@ function showScanning(current, total) {
 
   if (total) {
     const pct = Math.round((current / total) * 100);
+    const remainingEstimate = formatDuration(
+      getEstimatedSeconds(Math.max(total - current, 0))
+    );
+    const totalEstimate = formatDuration(getEstimatedSeconds(total));
     progressFill.style.width = pct + '%';
     progressCount.textContent = `${current} / ${total}`;
-    progressLabel.textContent = `Scanning friends... ${pct}%`;
+    progressLabel.textContent = `Scanning friends... ${pct}% (~${remainingEstimate} left, ~${totalEstimate} total)`;
   } else {
     progressFill.style.width = '0%';
     progressCount.textContent = '0 / ?';
@@ -127,7 +146,7 @@ scanBtn.addEventListener('click', () => {
 // step 2: user picks limit and starts
 startScanBtn.addEventListener('click', () => {
   const limit = parseInt(limitInput.value) || parseInt(limitInput.max);
-  showScanning(0, null);
+  showScanning(0, limit);
   startProgressPolling();
 
   chrome.runtime.sendMessage({ action: 'scan', limit }, (response) => {
@@ -143,6 +162,15 @@ startScanBtn.addEventListener('click', () => {
 
 cancelConfirmBtn.addEventListener('click', () => {
   showIdle('Open Discord to scan your friends network');
+});
+
+limitInput.addEventListener('input', () => {
+  const max = parseInt(limitInput.max);
+  let selected = parseInt(limitInput.value);
+  if (Number.isNaN(selected) || selected < 1) selected = 1;
+  if (max && selected > max) selected = max;
+  const estimate = formatDuration(getEstimatedSeconds(selected));
+  status.textContent = `How many friends to scan? Approx: ${estimate}`;
 });
 
 stopBtn.addEventListener('click', () => {
