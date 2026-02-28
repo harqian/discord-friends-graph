@@ -1,6 +1,8 @@
 const scanBtn = document.getElementById('scan');
 const viewBtn = document.getElementById('view');
 const exportBtn = document.getElementById('export');
+const importBtn = document.getElementById('import');
+const importFileInput = document.getElementById('import-file');
 const clearBtn = document.getElementById('clear');
 const stopBtn = document.getElementById('stop');
 const clearDuringBtn = document.getElementById('clear-during-scan');
@@ -106,6 +108,58 @@ function showDone(count) {
   exportBtn.disabled = false;
 }
 
+function setHasData(hasData) {
+  viewBtn.disabled = !hasData;
+  exportBtn.disabled = !hasData;
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeImportedConnections(payload) {
+  if (!isPlainObject(payload)) {
+    throw new Error('Import file must contain a JSON object');
+  }
+
+  const candidate = isPlainObject(payload.connections) ? payload.connections : payload;
+  if (!isPlainObject(candidate)) {
+    throw new Error('Import file is missing a valid connections object');
+  }
+
+  const normalized = {};
+  for (const [id, friend] of Object.entries(candidate)) {
+    if (!isPlainObject(friend)) continue;
+
+    normalized[String(id)] = {
+      username: typeof friend.username === 'string' ? friend.username : '',
+      tag: typeof friend.tag === 'string' ? friend.tag : '',
+      displayName: typeof friend.displayName === 'string' && friend.displayName.length > 0
+        ? friend.displayName
+        : (typeof friend.globalName === 'string' && friend.globalName.length > 0
+          ? friend.globalName
+          : (typeof friend.global_name === 'string' && friend.global_name.length > 0
+            ? friend.global_name
+            : (typeof friend.username === 'string' && friend.username.length > 0 ? friend.username : 'Unknown User'))),
+      globalName: typeof friend.globalName === 'string'
+        ? friend.globalName
+        : (typeof friend.global_name === 'string' ? friend.global_name : null),
+      discriminator: typeof friend.discriminator === 'string' ? friend.discriminator : null,
+      avatarUrl: typeof friend.avatarUrl === 'string' ? friend.avatarUrl : '',
+      id: String(friend.id || id),
+      profileUrl: typeof friend.profileUrl === 'string' ? friend.profileUrl : `https://discord.com/users/${friend.id || id}`,
+      serverNicknames: Array.isArray(friend.serverNicknames) ? friend.serverNicknames : [],
+      connections: Array.isArray(friend.connections) ? friend.connections.map((connectionId) => String(connectionId)) : []
+    };
+  }
+
+  if (Object.keys(normalized).length === 0) {
+    throw new Error('Import file does not contain any valid user records');
+  }
+
+  return normalized;
+}
+
 // restore state on popup open
 chrome.storage.local.get(['connections', 'scanProgress'], (result) => {
   if (result.scanProgress) {
@@ -140,6 +194,7 @@ function startProgressPolling() {
         if (result.connections && Object.keys(result.connections).length > 0) {
           showDone(Object.keys(result.connections).length);
         } else {
+          setHasData(false);
           showIdle('Open Discord to scan your friends network');
         }
       }
@@ -208,9 +263,8 @@ stopBtn.addEventListener('click', () => {
 
 clearDuringBtn.addEventListener('click', () => {
   chrome.runtime.sendMessage({ action: 'clearData' }, () => {
+    setHasData(false);
     showIdle('Data cleared');
-    viewBtn.disabled = true;
-    exportBtn.disabled = true;
   });
 });
 
@@ -220,9 +274,8 @@ viewBtn.addEventListener('click', () => {
 
 clearBtn.addEventListener('click', () => {
   chrome.storage.local.clear(() => {
+    setHasData(false);
     showIdle('Data cleared');
-    viewBtn.disabled = true;
-    exportBtn.disabled = true;
   });
 });
 
@@ -262,4 +315,45 @@ exportBtn.addEventListener('click', () => {
       }
     );
   });
+});
+
+importBtn.addEventListener('click', () => {
+  importFileInput.value = '';
+  importFileInput.click();
+});
+
+importFileInput.addEventListener('change', () => {
+  const [file] = importFileInput.files || [];
+  if (!file) return;
+
+  importBtn.disabled = true;
+  status.textContent = 'Importing data...';
+
+  const reader = new FileReader();
+  reader.onerror = () => {
+    importBtn.disabled = false;
+    status.textContent = 'Import failed: Could not read file';
+  };
+
+  reader.onload = () => {
+    try {
+      const payload = JSON.parse(String(reader.result || ''));
+      const connections = normalizeImportedConnections(payload);
+
+      chrome.storage.local.set({ connections, scanProgress: null }, () => {
+        importBtn.disabled = false;
+        if (chrome.runtime.lastError) {
+          status.textContent = `Import failed: ${chrome.runtime.lastError.message}`;
+          return;
+        }
+        setHasData(true);
+        showDone(Object.keys(connections).length);
+      });
+    } catch (error) {
+      importBtn.disabled = false;
+      status.textContent = `Import failed: ${error.message}`;
+    }
+  };
+
+  reader.readAsText(file);
 });
