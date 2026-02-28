@@ -181,6 +181,28 @@
       backdrop-filter: blur(4px);
     }
 
+    #privacy-controls {
+      position: fixed;
+      top: 58px;
+      left: 12px;
+      z-index: 1200;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(24, 25, 28, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #dcddde;
+      font-size: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      backdrop-filter: blur(4px);
+    }
+
+    #hide-names-toggle {
+      accent-color: #5865f2;
+    }
+
     #search-hints kbd {
       display: inline-block;
       min-width: 18px;
@@ -305,6 +327,10 @@
     <kbd>/</kbd>or
     <span style="margin-left: 3px;"><kbd>⌘</kbd><kbd>K</kbd>Search</span>
   </div>
+  <label id="privacy-controls">
+    <input id="hide-names-toggle" type="checkbox">
+    <span>Hide all names</span>
+  </label>
   <div id="search-overlay" aria-hidden="true">
     <div id="search-modal" role="dialog" aria-label="Search friends">
       <input id="search-input" type="text" autocomplete="off" spellcheck="false" placeholder="Search friends by username, global name, or nicknames">

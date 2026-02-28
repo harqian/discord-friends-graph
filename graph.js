@@ -71,9 +71,56 @@ let searchIndex = [];
 let searchResults = [];
 let activeResultIndex = 0;
 let selectedNodeIds = [];
+let hideNames = false;
+const HIDE_NAMES_STORAGE_KEY = 'graphHideNames';
+const hideNamesToggleEl = document.getElementById('hide-names-toggle');
 
 function getDisplayName(friend) {
   return friend.displayName || friend.globalName || friend.global_name || friend.username || 'Unknown User';
+}
+
+function getMaskedName() {
+  return 'Hidden User';
+}
+
+function getMaskedMeta() {
+  return 'Names hidden';
+}
+
+function getNodeLabel(friend) {
+  return hideNames ? '' : getDisplayName(friend);
+}
+
+function getNodeTitle(friend) {
+  const connectionCount = getNetworkMutualCount(friend);
+  if (hideNames) return formatConnectionCount(connectionCount);
+  return `${getDisplayName(friend)} - ${formatConnectionCount(connectionCount)}`;
+}
+
+function getSearchResultName(item) {
+  return hideNames ? getMaskedName() : item.name;
+}
+
+function getSearchResultMeta(item) {
+  if (hideNames) return getMaskedMeta();
+  return item.nickPreview || item.username || 'No nickname data';
+}
+
+function getProfileName(friend) {
+  return hideNames ? getMaskedName() : getDisplayName(friend);
+}
+
+function getProfileTag(friend) {
+  return hideNames ? '' : (friend.tag || '');
+}
+
+function getProfileStats(friend) {
+  const mutualCount = getNetworkMutualCount(friend);
+  if (hideNames) return formatConnectionCount(mutualCount);
+  const nickLine = formatServerNicknames(friend);
+  return nickLine
+    ? `${formatConnectionCount(mutualCount)} | ${nickLine}`
+    : formatConnectionCount(mutualCount);
 }
 
 function getProfileUrl(friend) {
@@ -197,11 +244,11 @@ function renderSearchResults() {
 
     const nameEl = document.createElement('div');
     nameEl.className = 'search-name';
-    nameEl.textContent = item.name;
+    nameEl.textContent = getSearchResultName(item);
 
     const metaEl = document.createElement('div');
     metaEl.className = 'search-meta';
-    metaEl.textContent = item.nickPreview || item.username || 'No nickname data';
+    metaEl.textContent = getSearchResultMeta(item);
 
     textWrap.appendChild(nameEl);
     textWrap.appendChild(metaEl);
@@ -258,8 +305,10 @@ function hideLoading() {
 
 async function loadGraph() {
   try {
-    const result = await chrome.storage.local.get(['connections']);
+    const result = await chrome.storage.local.get(['connections', HIDE_NAMES_STORAGE_KEY]);
     const connections = result.connections;
+    hideNames = Boolean(result[HIDE_NAMES_STORAGE_KEY]);
+    if (hideNamesToggleEl) hideNamesToggleEl.checked = hideNames;
 
     if (!connections || Object.keys(connections).length === 0) {
       setLoadingText('No data. Scan friends first.');
@@ -278,16 +327,12 @@ async function loadGraph() {
     for (let i = 0; i < totalNodes; i++) {
       const id = ids[i];
       const friend = connections[id];
-      const displayName = getDisplayName(friend);
-      const connectionCount = friend.connections.filter(
-        (mutualId) => connections[normalizeId(mutualId)]
-      ).length;
 
       data.nodes.push({
         id: id,
         image: friend.avatarUrl || defaultAvatarUrl,
-        label: displayName,
-        title: `${displayName} - ${formatConnectionCount(connectionCount)}`
+        label: getNodeLabel(friend),
+        title: getNodeTitle(friend)
       });
 
       // add edges for mutuals (dedupe by sorting ids)
@@ -390,11 +435,11 @@ function createProfileCard(friend) {
 
   const nameEl = document.createElement('div');
   nameEl.className = 'card-profile-name';
-  nameEl.textContent = getDisplayName(friend);
+  nameEl.textContent = getProfileName(friend);
 
   const tagEl = document.createElement('div');
   tagEl.className = 'card-profile-tag';
-  tagEl.textContent = friend.tag || '';
+  tagEl.textContent = getProfileTag(friend);
 
   nameWrap.appendChild(nameEl);
   nameWrap.appendChild(tagEl);
@@ -403,11 +448,7 @@ function createProfileCard(friend) {
 
   const statsEl = document.createElement('div');
   statsEl.className = 'card-profile-stats';
-  const mutualCount = getNetworkMutualCount(friend);
-  const nickLine = formatServerNicknames(friend);
-  statsEl.textContent = nickLine
-    ? `${formatConnectionCount(mutualCount)} | ${nickLine}`
-    : formatConnectionCount(mutualCount);
+  statsEl.textContent = getProfileStats(friend);
 
   const openEl = document.createElement('a');
   openEl.className = 'open-profile';
@@ -575,8 +616,36 @@ function resetHighlight() {
   network.body.data.edges.update(edgeUpdates);
 }
 
+function refreshGraphNameVisibility() {
+  if (hideNamesToggleEl) hideNamesToggleEl.checked = hideNames;
+
+  if (network && connectionsData) {
+    const updates = Object.entries(connectionsData).map(([id, friend]) => ({
+      id,
+      label: getNodeLabel(friend),
+      title: getNodeTitle(friend)
+    }));
+    network.body.data.nodes.update(updates);
+  }
+
+  if (searchResultsEl) renderSearchResults();
+  if (selectedNodeIds.length > 0) showInfoCard(selectedNodeIds);
+}
+
+async function setHideNames(nextValue) {
+  hideNames = Boolean(nextValue);
+  refreshGraphNameVisibility();
+  await chrome.storage.local.set({ [HIDE_NAMES_STORAGE_KEY]: hideNames });
+}
+
 // close button for info card
 document.querySelector('#info-card .close').addEventListener('click', clearSelections);
+
+if (hideNamesToggleEl) {
+  hideNamesToggleEl.addEventListener('change', (event) => {
+    setHideNames(event.target.checked);
+  });
+}
 
 // Esc clears active selection/highlight.
 document.addEventListener('keydown', (event) => {
