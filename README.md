@@ -60,7 +60,7 @@ You can remove data anytime via **Clear Data** in the popup.
 - `background.js`: service worker for token extraction, API calls, scan orchestration
 - `popup.html` / `popup.css` / `popup.js`: extension popup UI and scan controls
 - `graph.html` / `graph.js`: graph page and rendering logic
-- `lib/vis-network.min.js`: graph visualization library
+- `lib/vis-network.js`: graph visualization library
 - `icons/`: extension icons (`svg` source + generated `png`)
 
 ## Development Notes
