@@ -138,13 +138,35 @@ function extractServerNicknames(profile) {
     }));
 }
 
-async function getServerNicknames(userId, token) {
-  // Undocumented endpoint used by Discord clients. Keep this best-effort.
-  const profile = await discordFetch(
-    `https://discord.com/api/v9/users/${userId}/profile?with_mutual_guilds=true`,
-    token
-  );
-  return extractServerNicknames(profile);
+function extractMutualServers(profile, guildNameById) {
+  const mutualGuilds = Array.isArray(profile?.mutual_guilds) ? profile.mutual_guilds : [];
+  return mutualGuilds.map((guild) => {
+    const guildId = String(guild?.id || '');
+    const rawName = typeof guild?.name === 'string' ? guild.name : '';
+    const mappedName = guildNameById[guildId];
+    const name = rawName.trim() || (typeof mappedName === 'string' ? mappedName.trim() : '');
+    const rawNick = typeof guild?.nick === 'string' ? guild.nick.trim() : '';
+
+    return {
+      guildId,
+      name: name || null,
+      nick: rawNick || null
+    };
+  }).filter((guild) => guild.guildId);
+}
+
+async function getGuildNameMap(token) {
+  try {
+    const guilds = await discordFetch('https://discord.com/api/v9/users/@me/guilds', token);
+    return guilds.reduce((map, guild) => {
+      if (!guild?.id || typeof guild?.name !== 'string') return map;
+      map[String(guild.id)] = guild.name;
+      return map;
+    }, {});
+  } catch (e) {
+    console.log('[bg] guild list failed', e.message);
+    return {};
+  }
 }
 
 // just get friend count + cache the token/list for immediate scan
@@ -161,6 +183,7 @@ function getDefaultAvatarIndex(userId) {
 }
 
 function getAvatarUrl(user) {
+  // These CDN URLs are used as image sources in extension pages; no CDN host permission is needed.
   if (user.avatar) {
     return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`;
   }
@@ -224,6 +247,7 @@ async function scanFriends(tabId, limit) {
     if (limit && limit < friends.length) {
       friends = friends.slice(0, limit);
     }
+    const guildNameById = await getGuildNameMap(token);
     const existing = await chrome.storage.local.get(['connections']);
     const existingConnections = existing.connections && typeof existing.connections === 'object'
       ? existing.connections
@@ -260,6 +284,7 @@ async function scanFriends(tabId, limit) {
       const tag = getUserTag(friend.user);
       const displayName = friend.user.global_name || friend.user.username;
       let serverNicknames = [];
+      let mutualServers = [];
 
       data[friend.user.id] = {
         username: friend.user.username,
@@ -271,6 +296,7 @@ async function scanFriends(tabId, limit) {
         id: friend.user.id,
         profileUrl: `https://discord.com/users/${friend.user.id}`,
         serverNicknames,
+        mutualServers,
         connections: []
       };
 
@@ -285,8 +311,14 @@ async function scanFriends(tabId, limit) {
       }
 
       try {
-        serverNicknames = await getServerNicknames(friend.user.id, token);
+        const profile = await discordFetch(
+          `https://discord.com/api/v9/users/${friend.user.id}/profile?with_mutual_guilds=true`,
+          token
+        );
+        serverNicknames = extractServerNicknames(profile);
+        mutualServers = extractMutualServers(profile, guildNameById);
         data[friend.user.id].serverNicknames = serverNicknames;
+        data[friend.user.id].mutualServers = mutualServers;
       } catch (e) {
         console.log('[bg] profile nicknames failed for', friend.user.username, e.message);
       }

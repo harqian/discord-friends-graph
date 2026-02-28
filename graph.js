@@ -42,6 +42,7 @@ const options = {
       strokeWidth: 3,
       strokeColor: '#1a1a1a'
     },
+    // Fallback image loaded directly by the page; this does not require a CDN host permission.
     brokenImage: 'https://cdn.discordapp.com/embed/avatars/5.png',
     shape: 'circularImage'
   },
@@ -152,6 +153,36 @@ function formatServerNicknames(friend) {
   return extra > 0 ? `Server nicknames: ${preview} +${extra} more` : `Server nicknames: ${preview}`;
 }
 
+function getMutualServers(friend) {
+  if (Array.isArray(friend.mutualServers) && friend.mutualServers.length > 0) {
+    return friend.mutualServers
+      .filter((server) => server && server.guildId)
+      .map((server) => ({
+        guildId: normalizeId(server.guildId),
+        name: typeof server.name === 'string' && server.name.trim().length > 0 ? server.name.trim() : '',
+        nick: typeof server.nick === 'string' && server.nick.trim().length > 0 ? server.nick.trim() : ''
+      }));
+  }
+
+  const nickEntries = Array.isArray(friend.serverNicknames) ? friend.serverNicknames : [];
+  return nickEntries
+    .filter((entry) => entry && entry.guildId)
+    .map((entry) => ({
+      guildId: normalizeId(entry.guildId),
+      name: '',
+      nick: typeof entry.nick === 'string' && entry.nick.trim().length > 0 ? entry.nick.trim() : ''
+    }));
+}
+
+function formatMutualServerLabel(server) {
+  if (!server) return '';
+  if (hideNames) return 'Mutual server';
+  if (server.name && server.nick) return `${server.name} (${server.nick})`;
+  if (server.name) return server.name;
+  if (server.nick) return server.nick;
+  return 'Unknown server';
+}
+
 function getNickPreview(friend) {
   const nickEntries = Array.isArray(friend.serverNicknames) ? friend.serverNicknames : [];
   const uniqueNicks = [...new Set(
@@ -171,6 +202,9 @@ function toSearchText(friend) {
   const nickEntries = Array.isArray(friend.serverNicknames) ? friend.serverNicknames : [];
   nickEntries.forEach((entry) => {
     if (typeof entry?.nick === 'string') fields.push(entry.nick);
+  });
+  getMutualServers(friend).forEach((server) => {
+    if (server.name) fields.push(server.name);
   });
   return fields.join(' ').toLowerCase();
 }
@@ -457,8 +491,39 @@ function createProfileCard(friend) {
   openEl.rel = 'noopener noreferrer';
   openEl.textContent = 'Open Profile';
 
+  const mutualServers = getMutualServers(friend);
+
   wrapper.appendChild(header);
   wrapper.appendChild(statsEl);
+  if (mutualServers.length > 0) {
+    const sectionEl = document.createElement('div');
+    sectionEl.className = 'card-profile-section';
+
+    const sectionTitleEl = document.createElement('div');
+    sectionTitleEl.className = 'card-profile-section-title';
+    sectionTitleEl.textContent = `Mutual servers (${mutualServers.length})`;
+
+    const listEl = document.createElement('div');
+    listEl.className = 'card-profile-server-list';
+
+    mutualServers.slice(0, 6).forEach((server) => {
+      const itemEl = document.createElement('div');
+      itemEl.className = 'card-profile-server-item';
+      itemEl.textContent = formatMutualServerLabel(server);
+      listEl.appendChild(itemEl);
+    });
+
+    if (mutualServers.length > 6) {
+      const moreEl = document.createElement('div');
+      moreEl.className = 'card-profile-server-more';
+      moreEl.textContent = `+${mutualServers.length - 6} more`;
+      listEl.appendChild(moreEl);
+    }
+
+    sectionEl.appendChild(sectionTitleEl);
+    sectionEl.appendChild(listEl);
+    wrapper.appendChild(sectionEl);
+  }
   wrapper.appendChild(openEl);
   return wrapper;
 }

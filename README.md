@@ -51,8 +51,8 @@ You can remove data anytime via **Clear Data** in the popup.
 |---|---|
 | `storage` | Save scan results and progress locally |
 | `scripting` | Execute token extraction logic in the Discord tab context |
+| `downloads` | Export collected graph data as a JSON file |
 | `https://discord.com/*` | Access Discord pages and API endpoints |
-| `https://cdn.discordapp.com/*` | Display avatar images in the graph |
 
 ## Project Structure
 
