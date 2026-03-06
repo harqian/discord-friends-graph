@@ -1,6 +1,7 @@
 const scanBtn = document.getElementById('scan');
 const viewBtn = document.getElementById('view');
 const exportBtn = document.getElementById('export');
+const exportFormatSelect = document.getElementById('export-format');
 const importBtn = document.getElementById('import');
 const importFileInput = document.getElementById('import-file');
 const clearBtn = document.getElementById('clear');
@@ -115,6 +116,122 @@ function setHasData(hasData) {
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function getDisplayName(friend) {
+  if (!isPlainObject(friend)) return 'Unknown User';
+  if (typeof friend.displayName === 'string' && friend.displayName.trim().length > 0) return friend.displayName;
+  if (typeof friend.globalName === 'string' && friend.globalName.trim().length > 0) return friend.globalName;
+  if (typeof friend.global_name === 'string' && friend.global_name.trim().length > 0) return friend.global_name;
+  if (typeof friend.username === 'string' && friend.username.trim().length > 0) return friend.username;
+  return 'Unknown User';
+}
+
+function escapeGmlString(value) {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n');
+}
+
+function buildGraphExportData(connections) {
+  const ids = Object.keys(connections);
+  const nodeIndexById = new Map();
+  const nodes = [];
+  const edgeKeys = new Set();
+  const edges = [];
+
+  ids.forEach((id, index) => {
+    const normalizedId = String(id);
+    nodeIndexById.set(normalizedId, index);
+    const friend = isPlainObject(connections[id]) ? connections[id] : {};
+    nodes.push({
+      index,
+      id: normalizedId,
+      label: getDisplayName(friend),
+      username: typeof friend.username === 'string' ? friend.username : '',
+      tag: typeof friend.tag === 'string' ? friend.tag : ''
+    });
+  });
+
+  ids.forEach((id) => {
+    const sourceDiscordId = String(id);
+    const sourceIndex = nodeIndexById.get(sourceDiscordId);
+    const friend = isPlainObject(connections[id]) ? connections[id] : {};
+    const mutualIds = Array.isArray(friend.connections) ? friend.connections : [];
+
+    mutualIds.forEach((mutualIdRaw) => {
+      const targetDiscordId = String(mutualIdRaw);
+      if (!nodeIndexById.has(targetDiscordId) || sourceDiscordId === targetDiscordId) return;
+
+      const edgeKey = [sourceDiscordId, targetDiscordId].sort().join('::');
+      if (edgeKeys.has(edgeKey)) return;
+      edgeKeys.add(edgeKey);
+
+      edges.push({
+        source: sourceIndex,
+        target: nodeIndexById.get(targetDiscordId)
+      });
+    });
+  });
+
+  return { nodes, edges };
+}
+
+function buildJsonExportPayload(connections) {
+  return {
+    exportedAt: new Date().toISOString(),
+    totalUsers: Object.keys(connections).length,
+    connections
+  };
+}
+
+function buildGmlExportText(connections) {
+  const { nodes, edges } = buildGraphExportData(connections);
+  const lines = [
+    'graph [',
+    '  directed 0',
+    `  nodeCount ${nodes.length}`,
+    `  edgeCount ${edges.length}`
+  ];
+
+  nodes.forEach((node) => {
+    lines.push('  node [');
+    lines.push(`    id ${node.index}`);
+    lines.push(`    label "${escapeGmlString(node.label)}"`);
+    lines.push(`    discordId "${escapeGmlString(node.id)}"`);
+    if (node.username) lines.push(`    username "${escapeGmlString(node.username)}"`);
+    if (node.tag) lines.push(`    tag "${escapeGmlString(node.tag)}"`);
+    lines.push('  ]');
+  });
+
+  edges.forEach((edge) => {
+    lines.push('  edge [');
+    lines.push(`    source ${edge.source}`);
+    lines.push(`    target ${edge.target}`);
+    lines.push('  ]');
+  });
+
+  lines.push(']');
+  return lines.join('\n');
+}
+
+function getExportConfig(connections, format, timestamp) {
+  if (format === 'gml') {
+    return {
+      mimeType: 'application/octet-stream',
+      filename: `discord-friend-graph-export-${timestamp}.gml`,
+      content: buildGmlExportText(connections),
+      userCount: Object.keys(connections).length
+    };
+  }
+
+  return {
+    mimeType: 'application/json;charset=utf-8',
+    filename: `discord-friend-graph-export-${timestamp}.json`,
+    content: JSON.stringify(buildJsonExportPayload(connections), null, 2),
+    userCount: Object.keys(connections).length
+  };
 }
 
 function normalizeImportedConnections(payload) {
@@ -291,26 +408,21 @@ exportBtn.addEventListener('click', () => {
       return;
     }
 
-    const payload = {
-      exportedAt: new Date().toISOString(),
-      totalUsers: Object.keys(connections).length,
-      connections
-    };
-
-    const dataUrl = `data:application/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(payload, null, 2)
-    )}`;
+    const format = exportFormatSelect?.value === 'gml' ? 'gml' : 'json';
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `discord-friend-graph-export-${timestamp}.json`;
+    const exportConfig = getExportConfig(connections, format, timestamp);
+    const blob = new Blob([exportConfig.content], { type: exportConfig.mimeType });
+    const objectUrl = URL.createObjectURL(blob);
 
     chrome.downloads.download(
-      { url: dataUrl, filename, saveAs: true },
+      { url: objectUrl, filename: exportConfig.filename, saveAs: true },
       (downloadId) => {
         if (chrome.runtime.lastError || !downloadId) {
           status.textContent = `Export failed: ${chrome.runtime.lastError?.message || 'Unknown error'}`;
         } else {
-          status.textContent = 'Export started';
+          status.textContent = `Export started (${exportConfig.userCount} users)`;
         }
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
         exportBtn.disabled = false;
       }
     );

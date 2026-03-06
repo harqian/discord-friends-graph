@@ -190,6 +190,27 @@ button {
   transition: background 0.15s;
 }
 
+#export-format-label {
+  font-size: 12px;
+  color: #72767d;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+#export-format {
+  padding: 9px 10px;
+  border: 1px solid #4f545c;
+  border-radius: 4px;
+  background: #202225;
+  color: #dcddde;
+  font-size: 13px;
+}
+
+#export-format:focus {
+  outline: none;
+  border-color: #5865f2;
+}
+
 #scan {
   background: #5865f2;
   color: #fff;

@@ -53,7 +53,7 @@ Full privacy policy: [PRIVACY_POLICY.md](./PRIVACY_POLICY.md)
 |---|---|
 | `storage` | Save scan results and progress locally |
 | `scripting` | Execute token extraction logic in the Discord tab context |
-| `downloads` | Export collected graph data as a JSON file |
+| `downloads` | Export collected graph data as JSON or GML files |
 | `https://discord.com/*` | Access Discord pages and API endpoints |
 
 ## Project Structure
