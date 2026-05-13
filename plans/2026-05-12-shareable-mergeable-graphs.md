@@ -623,15 +623,15 @@ Update the three documentation surfaces so users (and the Chrome Web Store revie
 ### Success Criteria
 
 #### Automated Verification
-- [ ] `grep -q "Export Shareable Page" README.md` succeeds.
-- [ ] `grep -q "user IDs always remain readable" PRIVACY_POLICY.md` succeeds (or equivalent phrasing).
-- [ ] `grep -q "activeTab" PERMISSIONS.md` succeeds.
-- [ ] PRIVACY_POLICY "Last updated" date is current.
+- [x] `grep -q "Export Shareable Page" README.md` succeeds.
+- [x] `grep -q "user IDs always remain readable" PRIVACY_POLICY.md` succeeds.
+- [x] `grep -q "activeTab" PERMISSIONS.md` succeeds.
+- [x] PRIVACY_POLICY "Last updated" date is current (May 12, 2026).
 
 #### Manual Verification
-- [ ] README reads coherently as a single document; a new user can install + scan + publish + embed + merge using only the README and `EMBED.md`.
-- [ ] PRIVACY_POLICY explicitly addresses the publication and merge flows.
-- [ ] No stale references to features that don't exist.
+- [x] README reads coherently as a single document; a new user can install + scan + publish + embed + merge using only the README and `EMBED.md`. *(re-read end-to-end after edits; new Sharing / Embedding / Merging sections wire into existing Quick Start and Privacy)*
+- [x] PRIVACY_POLICY explicitly addresses the publication and merge flows. *(two new dedicated sections: "When You Publish a Shareable Page" + "When You Merge with a Shared Page")*
+- [x] No stale references to features that don't exist. *(THOUGHS.md "somehow show im not logging the tokens" moved to resolved with pointer to where it's addressed)*
 
 **Implementation Note**: This phase has no behavior changes; ship after the prior phases are confirmed working.
 

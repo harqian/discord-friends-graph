@@ -1,6 +1,6 @@
 # Permissions Justification
 
-This document explains why each currently declared permission in [manifest.json](./manifest.json) is required by the extension as of February 28, 2026.
+This document explains why each currently declared permission in [manifest.json](./manifest.json) is required by the extension as of May 12, 2026.
 
 ## Declared Permissions
 
@@ -46,11 +46,13 @@ The extension extracts the logged-in Discord token from the Discord page context
 
 ## `downloads`
 
-Required to export the collected graph data as a JSON file through Chrome's Downloads API.
+Required to export collected graph data and shareable HTML pages through Chrome's Downloads API.
 
 Used for:
 
-- Starting a user-visible JSON download from the popup's Export button
+- Starting a user-visible JSON or GML download from the popup's Export button
+- Starting a user-visible shareable HTML download from the popup's **Export Shareable Page** button
+- Starting a merged shareable HTML download from the popup's merge flow
 
 Concrete call sites:
 
@@ -58,7 +60,23 @@ Concrete call sites:
 
 Why it is needed:
 
-Without `downloads`, the export feature cannot save the generated JSON payload to disk.
+Without `downloads`, the export and share features cannot save the generated payload to disk.
+
+## `activeTab`
+
+Required to read the embedded share data from the user-selected tab during the merge flow.
+
+Used for:
+
+- Reading `#lattice-share-data` from the active tab via `chrome.scripting.executeScript(...)` when the user clicks **Read active tab** in the merge dialog
+
+Concrete call sites:
+
+- `chrome.scripting.executeScript({ target: { tabId } })` in `popup.js` against the tab returned by `chrome.tabs.query({ active: true, currentWindow: true })`
+
+Why it is needed:
+
+`activeTab` grants the extension temporary access to the user's active tab at the moment the user clicks the extension's UI. It does not grant broad host access; it is scoped to a single tab activation. Without `activeTab`, the merge flow could only ingest share files via the file dropzone, not from a tab the user is currently viewing.
 
 ## Host Permission: `https://discord.com/*`
 
