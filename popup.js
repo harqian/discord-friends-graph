@@ -5,6 +5,19 @@ const exportFormatSelect = document.getElementById('export-format');
 const importBtn = document.getElementById('import');
 const importFileInput = document.getElementById('import-file');
 const clearBtn = document.getElementById('clear');
+const shareBtn = document.getElementById('share');
+const publishSection = document.getElementById('publish-section');
+const publishTitleInput = document.getElementById('publish-title');
+const publishHideNamesInput = document.getElementById('publish-hide-names');
+const publishHideAvatarsInput = document.getElementById('publish-hide-avatars');
+const publishShowOmitInput = document.getElementById('publish-show-omit');
+const publishOmitWrapper = document.getElementById('publish-omit-wrapper');
+const publishOmitSearchInput = document.getElementById('publish-omit-search');
+const publishOmitListEl = document.getElementById('publish-omit-list');
+const publishOmitCountEl = document.getElementById('publish-omit-count');
+const publishSummaryEl = document.getElementById('publish-summary');
+const publishConfirmBtn = document.getElementById('publish-confirm');
+const publishCancelBtn = document.getElementById('publish-cancel');
 const stopBtn = document.getElementById('stop');
 const clearDuringBtn = document.getElementById('clear-during-scan');
 const startScanBtn = document.getElementById('start-scan');
@@ -105,13 +118,13 @@ function showStopping() {
 function showDone(count) {
   stopRequested = false;
   showIdle(`${count} friends scanned`);
-  viewBtn.disabled = false;
-  exportBtn.disabled = false;
+  setHasData(true);
 }
 
 function setHasData(hasData) {
   viewBtn.disabled = !hasData;
   exportBtn.disabled = !hasData;
+  if (shareBtn) shareBtn.disabled = !hasData;
 }
 
 function isPlainObject(value) {
@@ -176,6 +189,48 @@ function buildGraphExportData(connections) {
   });
 
   return { nodes, edges };
+}
+
+const buildShareEnvelope = (connections, opts) => window.LatticeShareBuilder.buildShareEnvelope(connections, opts);
+
+function escapeHtmlText(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function escapeJsonForScriptTag(jsonString) {
+  return jsonString.replace(/</g, '\\u003c');
+}
+
+function fetchExtensionAsset(path) {
+  return fetch(chrome.runtime.getURL(path)).then((res) => {
+    if (!res.ok) throw new Error(`Failed to load ${path} (${res.status})`);
+    return res.text();
+  });
+}
+
+async function buildShareableHtml(envelope) {
+  const [template, viewerCss, viewerJs, visNetworkJs, graphJs] = await Promise.all([
+    fetchExtensionAsset('share/template.html'),
+    fetchExtensionAsset('share/viewer.css'),
+    fetchExtensionAsset('share/viewer.js'),
+    fetchExtensionAsset('lib/vis-network.js'),
+    fetchExtensionAsset('graph.js')
+  ]);
+
+  const titleText = envelope.title ? envelope.title : 'Discord Lattice Share';
+  const safeJson = escapeJsonForScriptTag(JSON.stringify(envelope));
+
+  return template
+    .replace('__SHARE_TITLE__', () => escapeHtmlText(titleText))
+    .replace('/*__VIEWER_CSS__*/', () => viewerCss)
+    .replace('/*__SHARE_ENVELOPE_JSON__*/', () => safeJson)
+    .replace('/*__VIEWER_BOOTSTRAP_JS__*/', () => viewerJs)
+    .replace('/*__VIS_NETWORK_JS__*/', () => visNetworkJs)
+    .replace('/*__GRAPH_JS__*/', () => graphJs);
 }
 
 function buildJsonExportPayload(connections) {
@@ -469,3 +524,203 @@ importFileInput.addEventListener('change', () => {
 
   reader.readAsText(file);
 });
+
+let publishCache = null;
+
+function getPublishOptions() {
+  const omittedIds = publishCache
+    ? Array.from(publishCache.omitted)
+    : [];
+  return {
+    title: publishTitleInput.value || '',
+    hideNames: Boolean(publishHideNamesInput.checked),
+    hideAvatars: Boolean(publishHideAvatarsInput.checked),
+    omittedIds
+  };
+}
+
+function renderPublishOmitList() {
+  if (!publishCache) return;
+  const query = (publishOmitSearchInput.value || '').trim().toLowerCase();
+  const filtered = !query
+    ? publishCache.indexed
+    : publishCache.indexed.filter((entry) => entry.searchText.includes(query));
+
+  publishOmitListEl.replaceChildren();
+  const fragment = document.createDocumentFragment();
+  filtered.slice(0, 200).forEach((entry) => {
+    const li = document.createElement('li');
+    li.className = 'publish-omit-item';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = publishCache.omitted.has(entry.id);
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) publishCache.omitted.add(entry.id);
+      else publishCache.omitted.delete(entry.id);
+      updatePublishSummary();
+    });
+
+    const label = document.createElement('span');
+    label.textContent = entry.displayLabel;
+
+    li.appendChild(checkbox);
+    li.appendChild(label);
+    li.addEventListener('click', (event) => {
+      if (event.target === checkbox) return;
+      checkbox.checked = !checkbox.checked;
+      checkbox.dispatchEvent(new Event('change'));
+    });
+    fragment.appendChild(li);
+  });
+  publishOmitListEl.appendChild(fragment);
+}
+
+function updatePublishSummary() {
+  if (!publishCache) return;
+  const total = publishCache.indexed.length;
+  const omitted = publishCache.omitted.size;
+  const kept = total - omitted;
+  publishOmitCountEl.textContent = `${omitted} omitted, ${kept} included`;
+
+  let edgeCount = 0;
+  const omittedSet = publishCache.omitted;
+  const edgeKeys = new Set();
+  publishCache.indexed.forEach((entry) => {
+    if (omittedSet.has(entry.id)) return;
+    const friend = publishCache.connections[entry.id];
+    if (!friend || !Array.isArray(friend.connections)) return;
+    friend.connections.forEach((rawOther) => {
+      const otherId = String(rawOther);
+      if (!otherId || otherId === entry.id) return;
+      if (omittedSet.has(otherId)) return;
+      if (!publishCache.connections[otherId]) return;
+      const key = [entry.id, otherId].sort().join('::');
+      if (edgeKeys.has(key)) return;
+      edgeKeys.add(key);
+      edgeCount += 1;
+    });
+  });
+
+  publishSummaryEl.textContent = `Will include ${kept} nodes and ${edgeCount} edges.`;
+}
+
+function openPublishDialog(connections) {
+  const ids = Object.keys(connections);
+  const indexed = ids.map((id) => {
+    const friend = isPlainObject(connections[id]) ? connections[id] : {};
+    const name = getDisplayName(friend);
+    const username = typeof friend.username === 'string' ? friend.username : '';
+    const tag = typeof friend.tag === 'string' ? friend.tag : '';
+    return {
+      id: String(id),
+      displayLabel: username && username !== name ? `${name} (${username})` : name,
+      searchText: `${name} ${username} ${tag}`.toLowerCase()
+    };
+  });
+  indexed.sort((a, b) => a.displayLabel.localeCompare(b.displayLabel));
+
+  publishCache = {
+    connections,
+    indexed,
+    omitted: new Set()
+  };
+
+  publishTitleInput.value = '';
+  publishHideNamesInput.checked = false;
+  publishHideAvatarsInput.checked = false;
+  publishShowOmitInput.checked = false;
+  publishOmitSearchInput.value = '';
+  publishOmitWrapper.classList.add('hidden');
+
+  publishSection.classList.remove('hidden');
+  buttons.classList.add('hidden');
+  renderPublishOmitList();
+  updatePublishSummary();
+}
+
+function closePublishDialog() {
+  publishCache = null;
+  publishSection.classList.add('hidden');
+  buttons.classList.remove('hidden');
+  publishOmitListEl.replaceChildren();
+}
+
+if (shareBtn) {
+  shareBtn.addEventListener('click', () => {
+    chrome.storage.local.get(['connections'], (result) => {
+      const connections = result.connections;
+      if (!connections || Object.keys(connections).length === 0) {
+        status.textContent = 'No data to share';
+        return;
+      }
+      status.textContent = 'Configure your shareable page';
+      openPublishDialog(connections);
+    });
+  });
+}
+
+if (publishShowOmitInput) {
+  publishShowOmitInput.addEventListener('change', () => {
+    if (publishShowOmitInput.checked) {
+      publishOmitWrapper.classList.remove('hidden');
+      renderPublishOmitList();
+    } else {
+      publishOmitWrapper.classList.add('hidden');
+      if (publishCache) publishCache.omitted.clear();
+      updatePublishSummary();
+    }
+  });
+}
+
+if (publishOmitSearchInput) {
+  publishOmitSearchInput.addEventListener('input', renderPublishOmitList);
+}
+
+if (publishCancelBtn) {
+  publishCancelBtn.addEventListener('click', () => {
+    closePublishDialog();
+    chrome.storage.local.get(['connections'], (result) => {
+      if (result.connections && Object.keys(result.connections).length > 0) {
+        status.textContent = `${Object.keys(result.connections).length} friends scanned`;
+      }
+    });
+  });
+}
+
+if (publishConfirmBtn) {
+  publishConfirmBtn.addEventListener('click', async () => {
+    if (!publishCache) return;
+    publishConfirmBtn.disabled = true;
+    publishCancelBtn.disabled = true;
+    status.textContent = 'Building shareable page...';
+
+    try {
+      const opts = getPublishOptions();
+      const envelope = buildShareEnvelope(publishCache.connections, opts);
+      const html = await buildShareableHtml(envelope);
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+
+      chrome.downloads.download(
+        { url, filename: `discord-lattice-share-${timestamp}.html`, saveAs: true },
+        (downloadId) => {
+          setTimeout(() => URL.revokeObjectURL(url), 30000);
+          publishConfirmBtn.disabled = false;
+          publishCancelBtn.disabled = false;
+          if (chrome.runtime.lastError || !downloadId) {
+            status.textContent = `Share failed: ${chrome.runtime.lastError?.message || 'cancelled'}`;
+          } else {
+            status.textContent = `Share ready (${envelope.nodes.length} nodes, ${envelope.edges.length} edges)`;
+            closePublishDialog();
+          }
+        }
+      );
+    } catch (err) {
+      publishConfirmBtn.disabled = false;
+      publishCancelBtn.disabled = false;
+      status.textContent = `Share failed: ${err.message}`;
+    }
+  });
+}

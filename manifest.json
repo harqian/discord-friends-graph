@@ -23,5 +23,11 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["share/template.html", "share/viewer.css", "share/viewer.js", "lib/vis-network.js", "graph.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

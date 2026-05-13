@@ -43,11 +43,44 @@
         <option value="gml">Graph Modeling Language (.gml)</option>
       </select>
       <button id="export" disabled>Export Data</button>
+      <button id="share" disabled>Export Shareable Page</button>
       <button id="import">Import Data</button>
       <button id="clear">Clear Data</button>
     </div>
+
+    <div id="publish-section" class="hidden">
+      <div class="publish-header">Export shareable page</div>
+      <label class="publish-field">
+        <span>Title (optional)</span>
+        <input type="text" id="publish-title" maxlength="80" placeholder="My Discord Friends">
+      </label>
+      <label class="publish-row">
+        <input type="checkbox" id="publish-hide-names">
+        <span>Hide names</span>
+      </label>
+      <label class="publish-row">
+        <input type="checkbox" id="publish-hide-avatars">
+        <span>Hide avatars</span>
+      </label>
+      <label class="publish-row">
+        <input type="checkbox" id="publish-show-omit">
+        <span>Omit specific friends</span>
+      </label>
+      <div id="publish-omit-wrapper" class="hidden">
+        <input type="text" id="publish-omit-search" placeholder="Search friends to omit">
+        <div id="publish-omit-count">0 omitted</div>
+        <ul id="publish-omit-list"></ul>
+      </div>
+      <div id="publish-summary"></div>
+      <div class="publish-actions">
+        <button id="publish-confirm">Publish</button>
+        <button id="publish-cancel">Cancel</button>
+      </div>
+    </div>
+
     <input id="import-file" type="file" accept="application/json,.json" hidden>
   </div>
+  <script src="lib/share-builder.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

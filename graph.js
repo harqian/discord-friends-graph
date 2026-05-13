@@ -73,8 +73,82 @@ let searchResults = [];
 let activeResultIndex = 0;
 let selectedNodeIds = [];
 let hideNames = false;
+let isShareMode = false;
 const HIDE_NAMES_STORAGE_KEY = 'graphHideNames';
 const hideNamesToggleEl = document.getElementById('hide-names-toggle');
+
+const hasChromeStorage = typeof chrome !== 'undefined'
+  && chrome.storage
+  && chrome.storage.local;
+
+function envelopeToConnections(envelope) {
+  const nodesById = new Map();
+  const connectionsObj = {};
+  const nodes = Array.isArray(envelope.nodes) ? envelope.nodes : [];
+  const edges = Array.isArray(envelope.edges) ? envelope.edges : [];
+
+  nodes.forEach((n) => {
+    if (!n || typeof n.id !== 'string') return;
+    const id = n.id;
+    nodesById.set(id, n);
+    connectionsObj[id] = {
+      username: typeof n.username === 'string' ? n.username : '',
+      tag: typeof n.tag === 'string' ? n.tag : '',
+      displayName: typeof n.label === 'string' ? n.label : '',
+      globalName: null,
+      discriminator: null,
+      avatarUrl: typeof n.avatarUrl === 'string' ? n.avatarUrl : defaultAvatarUrl,
+      id,
+      profileUrl: `https://discord.com/users/${id}`,
+      serverNicknames: typeof n.nickPreview === 'string' && n.nickPreview
+        ? [{ guildId: '', nick: n.nickPreview }]
+        : [],
+      mutualServers: [],
+      connections: []
+    };
+  });
+
+  edges.forEach((e) => {
+    if (!e) return;
+    const s = String(e.source || '');
+    const t = String(e.target || '');
+    if (!s || !t || s === t) return;
+    if (!nodesById.has(s) || !nodesById.has(t)) return;
+    connectionsObj[s].connections.push(t);
+    connectionsObj[t].connections.push(s);
+  });
+
+  return connectionsObj;
+}
+
+let dataSource = async () => {
+  const envelope = typeof window !== 'undefined' ? window.__latticeShareEnvelope : null;
+  if (envelope) {
+    return {
+      connections: envelopeToConnections(envelope),
+      hideNames: Boolean(envelope.obfuscation && envelope.obfuscation.hideNames),
+      hideAvatars: Boolean(envelope.obfuscation && envelope.obfuscation.hideAvatars),
+      isShare: true,
+      envelope
+    };
+  }
+
+  if (!hasChromeStorage) {
+    return { connections: {}, hideNames: false, hideAvatars: false, isShare: false };
+  }
+
+  const result = await chrome.storage.local.get(['connections', HIDE_NAMES_STORAGE_KEY]);
+  return {
+    connections: result.connections || {},
+    hideNames: Boolean(result[HIDE_NAMES_STORAGE_KEY]),
+    hideAvatars: false,
+    isShare: false
+  };
+};
+
+if (typeof window !== 'undefined') {
+  window.__latticeSetDataSource = (fn) => { dataSource = fn; };
+}
 
 function getDisplayName(friend) {
   return friend.displayName || friend.globalName || friend.global_name || friend.username || 'Unknown User';
@@ -339,13 +413,21 @@ function hideLoading() {
 
 async function loadGraph() {
   try {
-    const result = await chrome.storage.local.get(['connections', HIDE_NAMES_STORAGE_KEY]);
-    const connections = result.connections;
-    hideNames = Boolean(result[HIDE_NAMES_STORAGE_KEY]);
-    if (hideNamesToggleEl) hideNamesToggleEl.checked = hideNames;
+    const sourceResult = await dataSource();
+    const connections = sourceResult.connections;
+    hideNames = Boolean(sourceResult.hideNames);
+    isShareMode = Boolean(sourceResult.isShare);
+
+    if (isShareMode) {
+      const privacyControlsEl = document.getElementById('privacy-controls');
+      if (privacyControlsEl) privacyControlsEl.style.display = 'none';
+    } else if (hideNamesToggleEl) {
+      hideNamesToggleEl.checked = hideNames;
+    }
 
     if (!connections || Object.keys(connections).length === 0) {
-      setLoadingText('No data. Scan friends first.');
+      setLoadingText(isShareMode ? 'This share is empty.' : 'No data. Scan friends first.');
+      hideLoading();
       return;
     }
 
@@ -700,6 +782,7 @@ function refreshGraphNameVisibility() {
 async function setHideNames(nextValue) {
   hideNames = Boolean(nextValue);
   refreshGraphNameVisibility();
+  if (isShareMode || !hasChromeStorage) return;
   await chrome.storage.local.set({ [HIDE_NAMES_STORAGE_KEY]: hideNames });
 }
 
