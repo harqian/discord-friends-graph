@@ -400,3 +400,120 @@ button {
 }
 
 #publish-cancel:hover { background: rgba(79, 84, 92, 0.2); }
+
+#merge {
+  background: #4f545c;
+  color: #fff;
+}
+#merge:hover:not(:disabled) { background: #5d6269; }
+#merge:disabled { opacity: 0.5; cursor: not-allowed; }
+
+#merge-section {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #4f545c;
+  border-radius: 6px;
+  background: #2b2d31;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#merge-section.hidden { display: none; }
+
+.merge-header { font-size: 14px; font-weight: 500; color: #fff; }
+.merge-help { font-size: 12px; color: #b9bbbe; line-height: 1.5; }
+.merge-help code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.merge-actions-row { display: flex; gap: 8px; }
+
+#merge-read-tab {
+  flex: 1;
+  background: #5865f2;
+  color: #fff;
+}
+#merge-read-tab:hover:not(:disabled) { background: #4752c4; }
+
+#merge-cancel {
+  flex: 1;
+  background: transparent;
+  color: #b9bbbe;
+  border: 1px solid #4f545c;
+}
+
+#merge-cancel:hover { background: rgba(79, 84, 92, 0.2); }
+
+#merge-dropzone {
+  display: block;
+  text-align: center;
+  padding: 14px;
+  border: 1px dashed #4f545c;
+  border-radius: 6px;
+  background: #202225;
+  color: #b9bbbe;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+#merge-dropzone:hover, #merge-dropzone.dragover {
+  border-color: #5865f2;
+  background: rgba(88, 101, 242, 0.05);
+  color: #f2f3f5;
+}
+
+.merge-error {
+  background: rgba(237, 66, 69, 0.1);
+  border: 1px solid rgba(237, 66, 69, 0.5);
+  color: #ed4245;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.merge-error.hidden { display: none; }
+
+#merge-preview {
+  background: #202225;
+  border: 1px solid #4f545c;
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#merge-preview.hidden { display: none; }
+
+.merge-preview-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #f2f3f5;
+}
+
+.merge-preview-stats {
+  font-size: 12px;
+  color: #b9bbbe;
+  line-height: 1.6;
+}
+
+.merge-preview-actions { display: flex; gap: 8px; }
+
+#merge-preview-open {
+  flex: 1;
+  background: #4f545c;
+  color: #fff;
+}
+#merge-preview-open:hover:not(:disabled) { background: #5d6269; }
+
+#merge-publish {
+  flex: 1;
+  background: #5865f2;
+  color: #fff;
+}
+#merge-publish:hover:not(:disabled) { background: #4752c4; }

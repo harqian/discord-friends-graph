@@ -61,6 +61,8 @@ const options = {
 
 let network = null;
 let connectionsData = null;
+let shareEnvelope = null;
+let edgeProvenanceByKey = new Map();
 const loadingEl = document.getElementById('loading');
 const loadingTextEl = document.getElementById('loading-text');
 const defaultAvatarUrl = 'https://cdn.discordapp.com/embed/avatars/0.png';
@@ -121,7 +123,33 @@ function envelopeToConnections(envelope) {
   return connectionsObj;
 }
 
+function getMergePreviewModeFromUrl() {
+  if (typeof window === 'undefined' || !window.location) return false;
+  try {
+    const params = new URLSearchParams(window.location.search || '');
+    return params.get('preview') === 'merge';
+  } catch (_) {
+    return false;
+  }
+}
+
 let dataSource = async () => {
+  // Merge preview path: ?preview=merge reads from chrome.storage.session
+  if (getMergePreviewModeFromUrl() && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.session) {
+    const sessionResult = await chrome.storage.session.get(['mergePreviewEnvelope']);
+    const envelope = sessionResult.mergePreviewEnvelope;
+    if (envelope) {
+      return {
+        connections: envelopeToConnections(envelope),
+        hideNames: Boolean(envelope.obfuscation && envelope.obfuscation.hideNames),
+        hideAvatars: Boolean(envelope.obfuscation && envelope.obfuscation.hideAvatars),
+        isShare: true,
+        isPreview: true,
+        envelope
+      };
+    }
+  }
+
   const envelope = typeof window !== 'undefined' ? window.__latticeShareEnvelope : null;
   if (envelope) {
     return {
@@ -417,12 +445,28 @@ async function loadGraph() {
     const connections = sourceResult.connections;
     hideNames = Boolean(sourceResult.hideNames);
     isShareMode = Boolean(sourceResult.isShare);
+    shareEnvelope = sourceResult.envelope || null;
+    edgeProvenanceByKey = new Map();
+    if (shareEnvelope && Array.isArray(shareEnvelope.edges)) {
+      shareEnvelope.edges.forEach((e) => {
+        if (!e || !e.source || !e.target) return;
+        const key = [String(e.source), String(e.target)].sort().join('::');
+        edgeProvenanceByKey.set(key, Array.isArray(e.provenance) ? e.provenance.slice().sort() : []);
+      });
+    }
 
     if (isShareMode) {
       const privacyControlsEl = document.getElementById('privacy-controls');
       if (privacyControlsEl) privacyControlsEl.style.display = 'none';
     } else if (hideNamesToggleEl) {
       hideNamesToggleEl.checked = hideNames;
+    }
+
+    const legendEl = document.getElementById('provenance-legend');
+    if (legendEl) {
+      const hasMultiProvenance = [...edgeProvenanceByKey.values()].some((p) => p.length > 1 || (p.length === 1 && p[0] !== 'owner'));
+      if (hasMultiProvenance) legendEl.removeAttribute('hidden');
+      else legendEl.setAttribute('hidden', '');
     }
 
     if (!connections || Object.keys(connections).length === 0) {
@@ -469,7 +513,21 @@ async function loadGraph() {
     setLoadingText(`Building edges... ${links.size} found`);
     links.forEach(link => {
       const [from, to] = link.split('-');
-      data.edges.push({ from: from, to: to });
+      const provKey = [from, to].sort().join('::');
+      const prov = edgeProvenanceByKey.get(provKey) || [];
+      const isBoth = prov.length >= 2;
+      const isVisitorOnly = prov.length === 1 && prov[0] === 'visitor';
+      const baseColor = isBoth
+        ? { color: '#5865f2', highlight: '#7983ff' }
+        : isVisitorOnly
+          ? { color: '#3ba55d', highlight: '#46c574' }
+          : { color: '#444', highlight: '#5865f2' };
+      data.edges.push({
+        from: from,
+        to: to,
+        color: baseColor,
+        width: isBoth ? 2.2 : 0.4
+      });
     });
 
     setLoadingText(`Rendering graph... ${data.nodes.length} nodes, ${data.edges.length} edges`);
@@ -679,11 +737,12 @@ function highlightConnections() {
   const edges = network.body.data.edges.get();
   for (const edge of edges) {
     const keepEdge = visibleSet.has(edge.from) && visibleSet.has(edge.to);
-    edgeUpdates.push({
-      id: edge.id,
-      color: keepEdge ? '#5865f2' : 'rgba(68, 68, 68, 0.08)',
-      width: keepEdge ? 2 : 1
-    });
+    if (keepEdge) {
+      const base = getEdgeBaseStyle(edge.from, edge.to);
+      edgeUpdates.push({ id: edge.id, color: base.color, width: Math.max(base.width, 2) });
+    } else {
+      edgeUpdates.push({ id: edge.id, color: 'rgba(68, 68, 68, 0.08)', width: 1 });
+    }
   }
   network.body.data.edges.update(edgeUpdates);
 }
@@ -746,6 +805,16 @@ function clearSelections() {
   renderSelections();
 }
 
+function getEdgeBaseStyle(fromId, toId) {
+  const key = [String(fromId), String(toId)].sort().join('::');
+  const prov = edgeProvenanceByKey.get(key) || [];
+  const isBoth = prov.length >= 2;
+  const isVisitorOnly = prov.length === 1 && prov[0] === 'visitor';
+  if (isBoth) return { color: '#5865f2', width: 2.2 };
+  if (isVisitorOnly) return { color: '#3ba55d', width: 1.2 };
+  return { color: '#444', width: 1 };
+}
+
 function resetHighlight() {
   if (!connectionsData || !network) return;
 
@@ -758,7 +827,8 @@ function resetHighlight() {
   const edgeUpdates = [];
   const edges = network.body.data.edges.get();
   for (const edge of edges) {
-    edgeUpdates.push({ id: edge.id, color: '#444', width: 1 });
+    const base = getEdgeBaseStyle(edge.from, edge.to);
+    edgeUpdates.push({ id: edge.id, color: base.color, width: base.width });
   }
   network.body.data.edges.update(edgeUpdates);
 }

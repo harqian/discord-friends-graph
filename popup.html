@@ -44,8 +44,34 @@
       </select>
       <button id="export" disabled>Export Data</button>
       <button id="share" disabled>Export Shareable Page</button>
+      <button id="merge" disabled>Merge with shared page</button>
       <button id="import">Import Data</button>
       <button id="clear">Clear Data</button>
+    </div>
+
+    <div id="merge-section" class="hidden">
+      <div class="merge-header">Merge with shared page</div>
+      <p class="merge-help">
+        Open a Discord Lattice share page in another tab, then click <b>Read active tab</b>.
+        Or drop a downloaded <code>.html</code> share file below.
+      </p>
+      <div class="merge-actions-row">
+        <button id="merge-read-tab">Read active tab</button>
+        <button id="merge-cancel">Cancel</button>
+      </div>
+      <label id="merge-dropzone">
+        <input type="file" id="merge-file" accept=".html,text/html" hidden>
+        <span>Drop a share .html file here, or click to select</span>
+      </label>
+      <div id="merge-error" class="merge-error hidden"></div>
+      <div id="merge-preview" class="hidden">
+        <div class="merge-preview-title"></div>
+        <div class="merge-preview-stats"></div>
+        <div class="merge-preview-actions">
+          <button id="merge-preview-open">Preview merged graph</button>
+          <button id="merge-publish">Publish merged share</button>
+        </div>
+      </div>
     </div>
 
     <div id="publish-section" class="hidden">

@@ -3,7 +3,7 @@
   "name": "Discord Friends Graph",
   "version": "1.0.0",
   "description": "Display mutual connections and mutual servers with your friends on discord. All data stays local.",
-  "permissions": ["storage", "scripting", "downloads"],
+  "permissions": ["storage", "scripting", "downloads", "activeTab"],
   "host_permissions": ["https://discord.com/*"],
   "background": {
     "service_worker": "background.js"

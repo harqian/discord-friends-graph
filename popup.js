@@ -6,6 +6,18 @@ const importBtn = document.getElementById('import');
 const importFileInput = document.getElementById('import-file');
 const clearBtn = document.getElementById('clear');
 const shareBtn = document.getElementById('share');
+const mergeBtn = document.getElementById('merge');
+const mergeSection = document.getElementById('merge-section');
+const mergeReadTabBtn = document.getElementById('merge-read-tab');
+const mergeCancelBtn = document.getElementById('merge-cancel');
+const mergeDropzone = document.getElementById('merge-dropzone');
+const mergeFileInput = document.getElementById('merge-file');
+const mergeErrorEl = document.getElementById('merge-error');
+const mergePreviewEl = document.getElementById('merge-preview');
+const mergePreviewTitleEl = mergePreviewEl ? mergePreviewEl.querySelector('.merge-preview-title') : null;
+const mergePreviewStatsEl = mergePreviewEl ? mergePreviewEl.querySelector('.merge-preview-stats') : null;
+const mergePreviewOpenBtn = document.getElementById('merge-preview-open');
+const mergePublishBtn = document.getElementById('merge-publish');
 const publishSection = document.getElementById('publish-section');
 const publishTitleInput = document.getElementById('publish-title');
 const publishHideNamesInput = document.getElementById('publish-hide-names');
@@ -125,6 +137,7 @@ function setHasData(hasData) {
   viewBtn.disabled = !hasData;
   exportBtn.disabled = !hasData;
   if (shareBtn) shareBtn.disabled = !hasData;
+  if (mergeBtn) mergeBtn.disabled = !hasData;
 }
 
 function isPlainObject(value) {
@@ -724,3 +737,245 @@ if (publishConfirmBtn) {
     }
   });
 }
+
+let mergeCache = null;
+
+function showMergeError(msg) {
+  if (!mergeErrorEl) return;
+  mergeErrorEl.textContent = msg;
+  mergeErrorEl.classList.remove('hidden');
+  mergePreviewEl.classList.add('hidden');
+}
+
+function clearMergeError() {
+  if (mergeErrorEl) {
+    mergeErrorEl.textContent = '';
+    mergeErrorEl.classList.add('hidden');
+  }
+}
+
+function openMergeSection() {
+  if (!mergeSection) return;
+  clearMergeError();
+  mergeCache = null;
+  mergePreviewEl.classList.add('hidden');
+  if (mergeFileInput) mergeFileInput.value = '';
+  mergeSection.classList.remove('hidden');
+  buttons.classList.add('hidden');
+}
+
+function closeMergeSection() {
+  if (!mergeSection) return;
+  mergeCache = null;
+  mergeSection.classList.add('hidden');
+  buttons.classList.remove('hidden');
+}
+
+async function loadOurEnvelope() {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(['connections'], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+      const connections = result.connections;
+      if (!connections || Object.keys(connections).length === 0) {
+        reject(new Error('You have no local scan to merge with. Scan friends first.'));
+        return;
+      }
+      try {
+        const envelope = window.LatticeShareBuilder.buildShareEnvelope(connections, {});
+        resolve(envelope);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+}
+
+async function applyMergePreview(theirs) {
+  try {
+    window.LatticeShareBuilder.validateShareEnvelope(theirs);
+  } catch (e) {
+    showMergeError(`Not a valid share file: ${e.message}`);
+    return;
+  }
+  let ours;
+  try {
+    ours = await loadOurEnvelope();
+  } catch (e) {
+    showMergeError(e.message);
+    return;
+  }
+  const summary = window.LatticeShareBuilder.summarizeMatch(theirs, ours);
+  const merged = window.LatticeShareBuilder.mergeEnvelopes(theirs, ours);
+  mergeCache = { theirs, ours, merged };
+
+  clearMergeError();
+  mergePreviewTitleEl.textContent = theirs.title ? `Found: ${theirs.title}` : 'Found shared graph';
+  mergePreviewStatsEl.innerHTML = '';
+  const lines = [
+    `Their nodes: ${summary.theirNodeCount}`,
+    `Your nodes:  ${summary.ourNodeCount}`,
+    `Shared:      ${summary.sharedNodeCount} people (matched by user ID)`,
+    `Merged:      ${merged.nodes.length} nodes, ${merged.edges.length} edges`
+  ];
+  lines.forEach((line) => {
+    const div = document.createElement('div');
+    div.textContent = line;
+    mergePreviewStatsEl.appendChild(div);
+  });
+  mergePreviewEl.classList.remove('hidden');
+}
+
+async function readShareFromFile(file) {
+  if (!file) throw new Error('No file selected');
+  if (!/\.html?$/i.test(file.name) && !/text\/html/i.test(file.type || '')) {
+    throw new Error('Expected an .html file');
+  }
+  const text = await file.text();
+  const doc = new DOMParser().parseFromString(text, 'text/html');
+  const el = doc.getElementById('lattice-share-data');
+  if (!el) throw new Error('File does not contain a Discord Lattice graph');
+  return JSON.parse(el.textContent);
+}
+
+async function readShareFromActiveTab() {
+  const [tab] = await new Promise((resolve) => chrome.tabs.query({ active: true, currentWindow: true }, resolve));
+  if (!tab) throw new Error('No active tab');
+  if (tab.url && tab.url.startsWith('chrome://')) {
+    throw new Error('Cannot read chrome:// pages');
+  }
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      const el = document.getElementById('lattice-share-data');
+      return el ? el.textContent : null;
+    }
+  });
+  const raw = results && results[0] ? results[0].result : null;
+  if (!raw) throw new Error('No Discord Lattice graph found on this page');
+  return JSON.parse(raw);
+}
+
+if (mergeBtn) {
+  mergeBtn.addEventListener('click', () => {
+    openMergeSection();
+    status.textContent = 'Pick a share to merge';
+  });
+}
+
+if (mergeCancelBtn) {
+  mergeCancelBtn.addEventListener('click', () => {
+    closeMergeSection();
+    chrome.storage.local.get(['connections'], (result) => {
+      if (result.connections && Object.keys(result.connections).length > 0) {
+        status.textContent = `${Object.keys(result.connections).length} friends scanned`;
+      }
+    });
+  });
+}
+
+if (mergeReadTabBtn) {
+  mergeReadTabBtn.addEventListener('click', async () => {
+    mergeReadTabBtn.disabled = true;
+    clearMergeError();
+    try {
+      const envelope = await readShareFromActiveTab();
+      await applyMergePreview(envelope);
+    } catch (e) {
+      showMergeError(e.message);
+    } finally {
+      mergeReadTabBtn.disabled = false;
+    }
+  });
+}
+
+if (mergeDropzone) {
+  mergeDropzone.addEventListener('click', (e) => {
+    if (e.target === mergeFileInput) return;
+    mergeFileInput.click();
+  });
+  ['dragenter', 'dragover'].forEach((evt) => {
+    mergeDropzone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      mergeDropzone.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach((evt) => {
+    mergeDropzone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      mergeDropzone.classList.remove('dragover');
+    });
+  });
+  mergeDropzone.addEventListener('drop', async (e) => {
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+    try {
+      const envelope = await readShareFromFile(file);
+      await applyMergePreview(envelope);
+    } catch (err) {
+      showMergeError(err.message);
+    }
+  });
+}
+
+if (mergeFileInput) {
+  mergeFileInput.addEventListener('change', async () => {
+    const file = mergeFileInput.files && mergeFileInput.files[0];
+    if (!file) return;
+    try {
+      const envelope = await readShareFromFile(file);
+      await applyMergePreview(envelope);
+    } catch (err) {
+      showMergeError(err.message);
+    } finally {
+      mergeFileInput.value = '';
+    }
+  });
+}
+
+if (mergePreviewOpenBtn) {
+  mergePreviewOpenBtn.addEventListener('click', async () => {
+    if (!mergeCache) return;
+    if (!chrome.storage.session) {
+      showMergeError('Your browser does not support chrome.storage.session.');
+      return;
+    }
+    await chrome.storage.session.set({ mergePreviewEnvelope: mergeCache.merged });
+    chrome.tabs.create({ url: chrome.runtime.getURL('graph.html?preview=merge') });
+  });
+}
+
+if (mergePublishBtn) {
+  mergePublishBtn.addEventListener('click', async () => {
+    if (!mergeCache) return;
+    mergePublishBtn.disabled = true;
+    status.textContent = 'Building merged shareable page...';
+    try {
+      const html = await buildShareableHtml(mergeCache.merged);
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      chrome.downloads.download(
+        { url, filename: `discord-lattice-merged-${timestamp}.html`, saveAs: true },
+        (downloadId) => {
+          setTimeout(() => URL.revokeObjectURL(url), 30000);
+          mergePublishBtn.disabled = false;
+          if (chrome.runtime.lastError || !downloadId) {
+            status.textContent = `Merge failed: ${chrome.runtime.lastError?.message || 'cancelled'}`;
+          } else {
+            status.textContent = `Merged share ready (${mergeCache.merged.nodes.length} nodes)`;
+            closeMergeSection();
+          }
+        }
+      );
+    } catch (err) {
+      mergePublishBtn.disabled = false;
+      status.textContent = `Merge failed: ${err.message}`;
+    }
+  });
+}
+

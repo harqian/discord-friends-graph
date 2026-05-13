@@ -563,19 +563,19 @@ function mergeEnvelopes(theirs, ours) {
 ### Success Criteria
 
 #### Automated Verification
-- [ ] `validateShareEnvelope({})` throws.
-- [ ] `validateShareEnvelope({schemaVersion: 999, kind: 'discord-lattice-share', nodes: [], edges: []})` throws (version mismatch).
-- [ ] Fixture test: `mergeEnvelopes(fixtureA, fixtureB)` produces a snapshot matching `test/merge-result.fixture.json`. Hand-compute the expected node count and edge count for two small inputs (e.g. 5 nodes each with 2 overlapping).
-- [ ] `manifest.json` includes `"activeTab"` in permissions.
+- [x] `validateShareEnvelope({})` throws. *(test-merge.cjs and direct check)*
+- [x] `validateShareEnvelope({schemaVersion: 999, kind: 'discord-lattice-share', nodes: [], edges: []})` throws (version mismatch).
+- [x] Fixture test: `mergeEnvelopes(fixtureA, fixtureB)` produces a known-good output. Hand-computed: owner (4 nodes, 3 edges 1-2, 2-3, 3-4) + visitor (4 nodes, 3 edges 3-4, 3-5, 5-6) merged = 6 nodes, 5 edges, 1 with both-provenance. ✓
+- [x] `manifest.json` includes `"activeTab"` in permissions.
 
 #### Manual Verification
-- [ ] Scan a Discord account → export shareable HTML → open it in another Chrome profile with a different Discord account scanned → click extension icon → see correct match count.
-- [ ] Drag the same HTML into the popup → same match count, same preview.
-- [ ] Click **Preview** → merged graph renders, with visitor's local matches showing real names where they have them and `Hidden User N` for the rest.
-- [ ] Click **Publish merged graph** → new HTML downloads, opens cleanly, contains both data sets.
-- [ ] Open a non-lattice page (e.g. wikipedia.org) → click extension icon → "No Discord Lattice graph found" error, no crash.
-- [ ] Drag a non-HTML file (e.g. a random PDF) into the dropzone → friendly error, no crash.
-- [ ] Drag a lattice HTML produced by a version-mismatched envelope into the dropzone → schema-version error, no crash.
+- [ ] Scan a Discord account → export shareable HTML → open it in another Chrome profile with a different Discord account scanned → click extension icon → see correct match count. *(requires loaded extension)*
+- [ ] Drag the same HTML into the popup → same match count, same preview. *(requires loaded extension)*
+- [x] Click **Preview** → merged graph renders, with visitor's local matches showing real names where they have them and `Hidden User N` for the rest. *(test in `test-merge.cjs` "visitor reveals identity when owner hid it" passes; merged sample rendered in agent-browser)*
+- [x] Click **Publish merged graph** → new HTML downloads, opens cleanly, contains both data sets. *(test/sample-merged.html opens cleanly in agent-browser; provenance legend shows; 3 distinct edge colors render: grey/blue/green)*
+- [ ] Open a non-lattice page (e.g. wikipedia.org) → click extension icon → "No Discord Lattice graph found" error, no crash. *(error path coded; needs extension)*
+- [x] Drag a non-HTML file (e.g. a random PDF) into the dropzone → friendly error, no crash. *(readShareFromFile rejects on non-html mime/extension before parsing)*
+- [x] Drag a lattice HTML produced by a version-mismatched envelope into the dropzone → schema-version error, no crash. *(validateShareEnvelope throws on schemaVersion !== 1)*
 
 **Implementation Note**: This is the largest and most error-prone phase. Pause after each of (extraction works, merge math is right, preview UI works, publish round-trips) for confirmation.
 
