@@ -19,7 +19,7 @@ it with:
   height="600"
   style="border: 0; border-radius: 8px;"
   loading="lazy"
-  title="Discord friend graph"
+  title="Discord Friends Graph"
 ></iframe>
 ```
 
