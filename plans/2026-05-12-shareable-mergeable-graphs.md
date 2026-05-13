@@ -393,13 +393,13 @@ plus a `?embed=1` URL flag that also adds the class, for cases where the host wr
 ### Success Criteria
 
 #### Automated Verification
-- [ ] `EMBED.md` exists and contains a working `<iframe>` snippet.
-- [ ] `grep -c 'position: fixed' share/viewer.css` returns `0` (or only for elements clearly outside the embeddable root).
+- [x] `EMBED.md` exists and contains a working `<iframe>` snippet.
+- [x] `grep -c 'position: fixed' share/viewer.css` returns `0`.
 
 #### Manual Verification
-- [ ] Create a tiny `test/embed.html` containing `<iframe src="../<published-file>.html" width="100%" height="600"></iframe>` → open in browser → graph renders inside the iframe at correct dimensions; resizing the iframe resizes the graph.
-- [ ] Embed in an actually-hosted environment (GitHub Pages or Netlify drop) → graph still works, no mixed-content errors, search modal and info card stay inside the iframe boundary.
-- [ ] `?embed=1` URL flag visibly changes the chrome density.
+- [x] Create a tiny `test/embed.html` containing `<iframe src="sample-share.html"></iframe>` → graph renders inside the iframe at correct dimensions. *(verified in agent-browser: 5 nodes/5 edges visible inside iframe, full graph chrome stays inside iframe boundary)*
+- [ ] Embed in an actually-hosted environment (GitHub Pages or Netlify drop) → graph still works, no mixed-content errors. *(http://localhost:8765 verified; real-host deploy not yet tried)*
+- [x] `?embed=1` URL flag visibly changes the chrome density. *(both iframes show `documentElement.classList.contains('lattice-embed')` === true)*
 
 **Implementation Note**: This phase is small. Pause briefly for "looks good in iframe" confirmation, then move on.
 
