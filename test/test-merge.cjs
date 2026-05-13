@@ -116,6 +116,15 @@ test('mergeEnvelopes: hide flags AND-combined (most permissive wins)', () => {
   assert.strictEqual(mixed.obfuscation.hideNames, false);
 });
 
+test('mergeEnvelopes: hideProfileLinks AND-combined', () => {
+  const ht = buildShareEnvelope(ownerConnections, { now: NOW, hideProfileLinks: true });
+  const ho = buildShareEnvelope(visitorConnections, { now: NOW, hideProfileLinks: true });
+  assert.strictEqual(mergeEnvelopes(ht, ho, { now: NOW }).obfuscation.hideProfileLinks, true);
+
+  const oneSide = buildShareEnvelope(visitorConnections, { now: NOW });  // hideProfileLinks: false
+  assert.strictEqual(mergeEnvelopes(ht, oneSide, { now: NOW }).obfuscation.hideProfileLinks, false);
+});
+
 test('mergeEnvelopes: omittedNodeCount sums', () => {
   const ot = buildShareEnvelope(ownerConnections, { now: NOW, omittedIds: ['4'] });
   const oo = buildShareEnvelope(visitorConnections, { now: NOW, omittedIds: ['6'] });

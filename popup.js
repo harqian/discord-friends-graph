@@ -22,6 +22,7 @@ const publishSection = document.getElementById('publish-section');
 const publishTitleInput = document.getElementById('publish-title');
 const publishHideNamesInput = document.getElementById('publish-hide-names');
 const publishHideAvatarsInput = document.getElementById('publish-hide-avatars');
+const publishHideProfileLinksInput = document.getElementById('publish-hide-profile-links');
 const publishShowOmitInput = document.getElementById('publish-show-omit');
 const publishOmitWrapper = document.getElementById('publish-omit-wrapper');
 const publishOmitSearchInput = document.getElementById('publish-omit-search');
@@ -548,6 +549,7 @@ function getPublishOptions() {
     title: publishTitleInput.value || '',
     hideNames: Boolean(publishHideNamesInput.checked),
     hideAvatars: Boolean(publishHideAvatarsInput.checked),
+    hideProfileLinks: Boolean(publishHideProfileLinksInput.checked),
     omittedIds
   };
 }
@@ -642,6 +644,7 @@ function openPublishDialog(connections) {
   publishTitleInput.value = '';
   publishHideNamesInput.checked = false;
   publishHideAvatarsInput.checked = false;
+  publishHideProfileLinksInput.checked = false;
   publishShowOmitInput.checked = false;
   publishOmitSearchInput.value = '';
   publishOmitWrapper.classList.add('hidden');
@@ -670,6 +673,14 @@ if (shareBtn) {
       status.textContent = 'Configure your shareable page';
       openPublishDialog(connections);
     });
+  });
+}
+
+if (publishHideNamesInput) {
+  publishHideNamesInput.addEventListener('change', () => {
+    if (publishHideNamesInput.checked && publishHideProfileLinksInput && !publishHideProfileLinksInput.checked) {
+      publishHideProfileLinksInput.checked = true;
+    }
   });
 }
 

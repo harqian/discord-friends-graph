@@ -75,6 +75,7 @@ let searchResults = [];
 let activeResultIndex = 0;
 let selectedNodeIds = [];
 let hideNames = false;
+let hideProfileLinks = false;
 let isShareMode = false;
 const HIDE_NAMES_STORAGE_KEY = 'graphHideNames';
 const hideNamesToggleEl = document.getElementById('hide-names-toggle');
@@ -143,6 +144,7 @@ let dataSource = async () => {
         connections: envelopeToConnections(envelope),
         hideNames: Boolean(envelope.obfuscation && envelope.obfuscation.hideNames),
         hideAvatars: Boolean(envelope.obfuscation && envelope.obfuscation.hideAvatars),
+        hideProfileLinks: Boolean(envelope.obfuscation && envelope.obfuscation.hideProfileLinks),
         isShare: true,
         isPreview: true,
         envelope
@@ -156,13 +158,14 @@ let dataSource = async () => {
       connections: envelopeToConnections(envelope),
       hideNames: Boolean(envelope.obfuscation && envelope.obfuscation.hideNames),
       hideAvatars: Boolean(envelope.obfuscation && envelope.obfuscation.hideAvatars),
+      hideProfileLinks: Boolean(envelope.obfuscation && envelope.obfuscation.hideProfileLinks),
       isShare: true,
       envelope
     };
   }
 
   if (!hasChromeStorage) {
-    return { connections: {}, hideNames: false, hideAvatars: false, isShare: false };
+    return { connections: {}, hideNames: false, hideAvatars: false, hideProfileLinks: false, isShare: false };
   }
 
   const result = await chrome.storage.local.get(['connections', HIDE_NAMES_STORAGE_KEY]);
@@ -170,6 +173,7 @@ let dataSource = async () => {
     connections: result.connections || {},
     hideNames: Boolean(result[HIDE_NAMES_STORAGE_KEY]),
     hideAvatars: false,
+    hideProfileLinks: false,
     isShare: false
   };
 };
@@ -444,6 +448,7 @@ async function loadGraph() {
     const sourceResult = await dataSource();
     const connections = sourceResult.connections;
     hideNames = Boolean(sourceResult.hideNames);
+    hideProfileLinks = Boolean(sourceResult.hideProfileLinks);
     isShareMode = Boolean(sourceResult.isShare);
     shareEnvelope = sourceResult.envelope || null;
     edgeProvenanceByKey = new Map();
@@ -574,6 +579,7 @@ async function loadGraph() {
 
     network.on('doubleClick', (params) => {
       if (params.nodes.length === 0) return;
+      if (hideProfileLinks) return;
       const friend = connectionsData[normalizeId(params.nodes[0])];
       if (!friend) return;
       window.open(getProfileUrl(friend), '_blank', 'noopener,noreferrer');
@@ -624,12 +630,15 @@ function createProfileCard(friend) {
   statsEl.className = 'card-profile-stats';
   statsEl.textContent = getProfileStats(friend);
 
-  const openEl = document.createElement('a');
-  openEl.className = 'open-profile';
-  openEl.href = getProfileUrl(friend);
-  openEl.target = '_blank';
-  openEl.rel = 'noopener noreferrer';
-  openEl.textContent = 'Open Profile';
+  let openEl = null;
+  if (!hideProfileLinks) {
+    openEl = document.createElement('a');
+    openEl.className = 'open-profile';
+    openEl.href = getProfileUrl(friend);
+    openEl.target = '_blank';
+    openEl.rel = 'noopener noreferrer';
+    openEl.textContent = 'Open Profile';
+  }
 
   const mutualServers = getMutualServers(friend);
 
@@ -664,7 +673,7 @@ function createProfileCard(friend) {
     sectionEl.appendChild(listEl);
     wrapper.appendChild(sectionEl);
   }
-  wrapper.appendChild(openEl);
+  if (openEl) wrapper.appendChild(openEl);
   return wrapper;
 }
 

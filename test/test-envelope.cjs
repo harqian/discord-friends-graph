@@ -108,6 +108,18 @@ test('title null when blank', () => {
   assert.strictEqual(env.title, null);
 });
 
+test('hideProfileLinks defaults to false', () => {
+  const env = buildShareEnvelope(connections, { now: FIXED_NOW });
+  assert.strictEqual(env.obfuscation.hideProfileLinks, false);
+});
+
+test('hideProfileLinks: true is captured in obfuscation', () => {
+  const env = buildShareEnvelope(connections, { now: FIXED_NOW, hideProfileLinks: true });
+  assert.strictEqual(env.obfuscation.hideProfileLinks, true);
+  // Note: profile URLs aren't in the envelope at all (they're computed from id at render time).
+  // The flag is interpreted by the renderer, not stamped into nodes.
+});
+
 test('empty connections produces an empty but valid envelope', () => {
   const env = buildShareEnvelope({}, { now: FIXED_NOW });
   validateShareEnvelope(env);

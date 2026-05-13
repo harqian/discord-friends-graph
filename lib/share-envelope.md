@@ -32,6 +32,7 @@ publish/merge time.
   "obfuscation": {
     "hideNames": true,             // names + usernames + tags replaced with placeholders
     "hideAvatars": false,          // real avatar URLs replaced with the default Discord avatar
+    "hideProfileLinks": true,      // suppress "Open Profile" link + double-click-to-open in the viewer
     "omittedNodeCount": 3          // count only; identities of omitted nodes are NOT in the file
   },
   "nodes": [
@@ -79,6 +80,7 @@ truth in the file.
 |---|---|---|
 | `hideNames` | boolean | If true, `label`/`username`/`tag`/`nickPreview` are placeholders. |
 | `hideAvatars` | boolean | If true, every `avatarUrl` is `https://cdn.discordapp.com/embed/avatars/0.png`. |
+| `hideProfileLinks` | boolean | If true, the rendered viewer omits the "Open Profile" link and the double-click-to-open behavior. UI policy only — user IDs are still in the file and `discord.com/users/<id>` is constructable by any consumer. |
 | `omittedNodeCount` | integer >= 0 | Number of nodes excluded at publish time. Identities are not included. |
 
 ### `nodes[]`
