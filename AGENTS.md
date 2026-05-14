@@ -11,6 +11,7 @@ Chrome MV3 extension that scans the user's Discord friends list, renders mutual 
 - **Pure helpers in `lib/`, rendering in `graph.js`.** `lib/share-builder.js` and `lib/clustering.js` (future) expose globals via window AND a CommonJS export so they're testable in Node without DOM.
 - **`shareEnvelopeV1` is the contract.** Spec at `lib/share-envelope.md`. Bump `schemaVersion` only on non-additive changes. Adding a new optional field is additive.
 - **`graph.js` is shared between the extension and the published share viewer.** It detects its context via `window.__latticeShareEnvelope` (share mode) or a `?preview=merge` URL param (merge preview). All `chrome.*` calls are guarded with feature checks because the same file runs in pages that have no `chrome` global.
+- **`chrome.scripting.executeScript` uses `allFrames: true` in the merge flow** so lattice shares embedded in iframes on another site are discoverable. `activeTab` covers all frames in the active tab without needing host permissions.
 - **Tests run under Node**, no test runner: `node test/test-envelope.cjs`, `node test/test-merge.cjs`. Add a `test/test-*.cjs` for each new pure module.
 - **End-to-end UI checks via `agent-browser`.** Snapshot the rendered share or extension page; assert on DOM + envelope shape via `eval`.
 
@@ -30,8 +31,8 @@ Chrome MV3 extension that scans the user's Discord friends list, renders mutual 
 ## Open follow-ups (deferred)
 
 - **Multi-file merge.** Drop in N share files, union all of them plus local. Provenance becomes a set, not just owner/visitor. Mentioned 2026-05-13.
-- **Copy-from-embed buttons** in the share viewer (Download HTML / Copy embed code / Copy JSON). Mentioned 2026-05-13.
-- **In-popup merge instructions.** A `?` icon expanding into a 4-line how-to next to the merge button. Mentioned 2026-05-13.
+- **In-popup merge instructions.** A `?` icon expanding into a 4-line how-to next to the merge button. The help text under the merge button got a small update but the inline `?` is still TODO. Mentioned 2026-05-13.
+- **Copy JSON button.** The share-viewer toolbar has Download HTML + Copy embed code + Open in new tab. A fourth "Copy envelope JSON" button is a power-user nice-to-have that wasn't shipped. Mentioned 2026-05-13.
 
 ## Privacy posture
 
