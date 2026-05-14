@@ -554,6 +554,26 @@ async function loadGraph() {
       network.once('afterDrawing', () => hideLoading());
     }
 
+    // Auto-fit once when the container first has non-zero dimensions.
+    // Covers the case where the share viewer is loaded inside a hidden
+    // wrapper (e.g. a closed <details> or display:none parent) and gets
+    // its size only after the user reveals it.
+    if (typeof ResizeObserver !== 'undefined') {
+      let didInitialFit = false;
+      const ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          if (!didInitialFit && width > 0 && height > 0) {
+            didInitialFit = true;
+            try { network.fit({ animation: false }); } catch (_) {}
+            ro.disconnect();
+            return;
+          }
+        }
+      });
+      ro.observe(container);
+    }
+
     // click handler for info card
     network.on('click', (params) => {
       if (params.nodes.length > 0) {
