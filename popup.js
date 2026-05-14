@@ -857,16 +857,22 @@ async function readShareFromActiveTab() {
   if (tab.url && tab.url.startsWith('chrome://')) {
     throw new Error('Cannot read chrome:// pages');
   }
+
+  // Search all frames so embedded lattice iframes are discoverable, not just the top page.
   const results = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
+    target: { tabId: tab.id, allFrames: true },
     func: () => {
       const el = document.getElementById('lattice-share-data');
-      return el ? el.textContent : null;
+      if (!el) return null;
+      return { raw: el.textContent, frameUrl: window.location.href };
     }
   });
-  const raw = results && results[0] ? results[0].result : null;
-  if (!raw) throw new Error('No Discord Lattice graph found on this page');
-  return JSON.parse(raw);
+  const found = (results || []).map((r) => r && r.result).filter(Boolean);
+  if (found.length === 0) throw new Error('No Discord Lattice graph found on this page');
+  if (found.length > 1) {
+    console.warn(`[lattice] ${found.length} lattice shares found on this page; using the first.`);
+  }
+  return JSON.parse(found[0].raw);
 }
 
 if (mergeBtn) {

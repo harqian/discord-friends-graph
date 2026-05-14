@@ -21,6 +21,92 @@
     }
   }
 
+  function showToast(text) {
+    const toast = document.getElementById('lattice-toolbar-toast');
+    if (!toast) return;
+    toast.textContent = text;
+    toast.classList.add('visible');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('visible'), 1800);
+  }
+
+  async function downloadHtml() {
+    const url = window.location.href;
+    const filenameFromUrl = (() => {
+      try {
+        const u = new URL(url);
+        const last = u.pathname.split('/').filter(Boolean).pop();
+        if (last && /\.html?$/i.test(last)) return last;
+      } catch (_) {}
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      return `discord-lattice-share-${ts}.html`;
+    })();
+
+    let blob;
+    try {
+      const res = await fetch(url, { cache: 'force-cache' });
+      if (!res.ok) throw new Error('fetch failed');
+      blob = await res.blob();
+    } catch (_) {
+      // Fallback: reconstruct from current DOM. Loses byte-fidelity but functional.
+      const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    }
+
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = filenameFromUrl;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(objUrl);
+      a.remove();
+    }, 1000);
+    showToast('Download started');
+  }
+
+  async function copyEmbedCode() {
+    const url = window.location.href;
+    const snippet = `<iframe src="${url}" width="100%" height="600" style="border:0" title="Discord Friends Graph" loading="lazy"></iframe>`;
+    try {
+      await navigator.clipboard.writeText(snippet);
+      showToast('Embed code copied');
+    } catch (_) {
+      // Fallback for older / iframe-restricted contexts
+      const ta = document.createElement('textarea');
+      ta.value = snippet;
+      ta.style.position = 'absolute';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); showToast('Embed code copied'); }
+      catch (_) { showToast('Copy failed'); }
+      ta.remove();
+    }
+  }
+
+  function openFull() {
+    try {
+      window.open(window.location.href, '_blank', 'noopener,noreferrer');
+    } catch (_) {
+      showToast('Open failed');
+    }
+  }
+
+  function wireToolbar() {
+    const inIframe = window.self !== window.top;
+    const openBtn = document.getElementById('lattice-btn-open');
+    const downloadBtn = document.getElementById('lattice-btn-download');
+    const copyBtn = document.getElementById('lattice-btn-copy');
+    if (openBtn) {
+      if (inIframe) openBtn.removeAttribute('hidden');
+      openBtn.addEventListener('click', openFull);
+    }
+    if (downloadBtn) downloadBtn.addEventListener('click', downloadHtml);
+    if (copyBtn) copyBtn.addEventListener('click', copyEmbedCode);
+  }
+
   try {
     const el = document.getElementById('lattice-share-data');
     if (!el) throw new Error('No share data block found.');
@@ -37,6 +123,8 @@
     if (inIframe || urlParams.get('embed') === '1') {
       document.documentElement.classList.add('lattice-embed');
     }
+
+    wireToolbar();
   } catch (e) {
     showError('Failed to load share: ' + (e && e.message ? e.message : String(e)));
     window.__latticeShareEnvelope = null;
