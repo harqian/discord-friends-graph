@@ -12,7 +12,7 @@ Everything runs locally in your browser. There is no backend and no build step.
 - Explore connections in a graph view with avatars and node highlighting
 - Capture per-server nicknames from mutual guild profile data (best effort)
 - Export a self-contained shareable HTML you can embed anywhere
-- Merge a Discord Lattice share page with your own scan, locally
+- Merge a Discord Friends Graph share page with your own scan, locally
 - Clear stored data at any time
 
 ## Quick Start
@@ -64,7 +64,7 @@ options.
 
 ## Merging
 
-If you have the extension installed and visit a Discord Lattice share page,
+If you have the extension installed and visit a Discord Friends Graph share page,
 click **Merge with shared page** in the popup, then **Read active tab**.
 The extension reads the share data, matches users by Discord user ID against
 your own local scan, shows a match count, and lets you preview or publish a
@@ -102,7 +102,7 @@ Full privacy policy: [PRIVACY_POLICY.md](./PRIVACY_POLICY.md)
 | `storage` | Save scan results and progress locally |
 | `scripting` | Execute token extraction logic in the Discord tab context |
 | `downloads` | Export collected graph data as JSON / GML / shareable HTML |
-| `activeTab` | When you click **Read active tab** during merge, read the Discord Lattice share data out of the current tab |
+| `activeTab` | When you click **Read active tab** during merge, read the Discord Friends Graph share data out of the current tab |
 | `https://discord.com/*` | Access Discord pages and API endpoints |
 
 ## Project Structure

@@ -15,7 +15,7 @@ function escapeJsonForScriptTag(jsonString) { return jsonString.replace(/</g, '\
 function buildHtml(envelope) {
   const template = readAsset('share/template.html');
   return template
-    .replace('__SHARE_TITLE__', () => escapeHtmlText(envelope.title || 'Discord Lattice Share'))
+    .replace('__SHARE_TITLE__', () => escapeHtmlText(envelope.title || 'Discord Friends Graph Share'))
     .replace('/*__VIEWER_CSS__*/', () => readAsset('share/viewer.css'))
     .replace('/*__SHARE_ENVELOPE_JSON__*/', () => escapeJsonForScriptTag(JSON.stringify(envelope)))
     .replace('/*__VIEWER_BOOTSTRAP_JS__*/', () => readAsset('share/viewer.js'))

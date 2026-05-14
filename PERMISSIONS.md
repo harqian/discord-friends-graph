@@ -68,7 +68,7 @@ Required to read the embedded share data from the user-selected tab during the m
 
 Used for:
 
-- Reading `#lattice-share-data` from the active tab via `chrome.scripting.executeScript(...)` when the user clicks **Read active tab** in the merge dialog
+- Reading `#dfg-share-data` from the active tab via `chrome.scripting.executeScript(...)` when the user clicks **Read active tab** in the merge dialog
 
 Concrete call sites:
 

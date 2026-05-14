@@ -13,8 +13,8 @@
     if (envelope.schemaVersion !== 1) {
       throw new Error('Unsupported share schema version: ' + envelope.schemaVersion);
     }
-    if (envelope.kind !== 'discord-lattice-share') {
-      throw new Error('Not a Discord Lattice share file.');
+    if (envelope.kind !== 'discord-friends-graph-share') {
+      throw new Error('Not a Discord Friends Graph share file.');
     }
     if (!Array.isArray(envelope.nodes) || !Array.isArray(envelope.edges)) {
       throw new Error('Share data is missing nodes or edges.');
@@ -22,7 +22,7 @@
   }
 
   function showToast(text) {
-    const toast = document.getElementById('lattice-toolbar-toast');
+    const toast = document.getElementById('dfg-toolbar-toast');
     if (!toast) return;
     toast.textContent = text;
     toast.classList.add('visible');
@@ -39,7 +39,7 @@
         if (last && /\.html?$/i.test(last)) return last;
       } catch (_) {}
       const ts = new Date().toISOString().replace(/[:.]/g, '-');
-      return `discord-lattice-share-${ts}.html`;
+      return `discord-friends-graph-share-${ts}.html`;
     })();
 
     let blob;
@@ -96,9 +96,9 @@
 
   function wireToolbar() {
     const inIframe = window.self !== window.top;
-    const openBtn = document.getElementById('lattice-btn-open');
-    const downloadBtn = document.getElementById('lattice-btn-download');
-    const copyBtn = document.getElementById('lattice-btn-copy');
+    const openBtn = document.getElementById('dfg-btn-open');
+    const downloadBtn = document.getElementById('dfg-btn-download');
+    const copyBtn = document.getElementById('dfg-btn-copy');
     if (openBtn) {
       if (inIframe) openBtn.removeAttribute('hidden');
       openBtn.addEventListener('click', openFull);
@@ -108,25 +108,25 @@
   }
 
   try {
-    const el = document.getElementById('lattice-share-data');
+    const el = document.getElementById('dfg-share-data');
     if (!el) throw new Error('No share data block found.');
     const envelope = JSON.parse(el.textContent);
     validate(envelope);
-    window.__latticeShareEnvelope = envelope;
+    window.__dfgShareEnvelope = envelope;
 
     if (envelope.title) {
-      try { document.title = envelope.title + ' — Discord Lattice'; } catch (_) {}
+      try { document.title = envelope.title + ' — Discord Friends Graph'; } catch (_) {}
     }
 
     const inIframe = window.self !== window.top;
     const urlParams = new URLSearchParams(window.location.search || '');
     if (inIframe || urlParams.get('embed') === '1') {
-      document.documentElement.classList.add('lattice-embed');
+      document.documentElement.classList.add('dfg-embed');
     }
 
     wireToolbar();
   } catch (e) {
     showError('Failed to load share: ' + (e && e.message ? e.message : String(e)));
-    window.__latticeShareEnvelope = null;
+    window.__dfgShareEnvelope = null;
   }
 })();

@@ -10,8 +10,8 @@ Chrome MV3 extension that scans the user's Discord friends list, renders mutual 
 - **vis-network is checked in unminified** at `lib/vis-network.js` (1.43 MB). Don't replace it without reading commit `2c8451e` for the reason.
 - **Pure helpers in `lib/`, rendering in `graph.js`.** `lib/share-builder.js` and `lib/clustering.js` (future) expose globals via window AND a CommonJS export so they're testable in Node without DOM.
 - **`shareEnvelopeV1` is the contract.** Spec at `lib/share-envelope.md`. Bump `schemaVersion` only on non-additive changes. Adding a new optional field is additive.
-- **`graph.js` is shared between the extension and the published share viewer.** It detects its context via `window.__latticeShareEnvelope` (share mode) or a `?preview=merge` URL param (merge preview). All `chrome.*` calls are guarded with feature checks because the same file runs in pages that have no `chrome` global.
-- **`chrome.scripting.executeScript` uses `allFrames: true` in the merge flow** so lattice shares embedded in iframes on another site are discoverable. `activeTab` covers all frames in the active tab without needing host permissions.
+- **`graph.js` is shared between the extension and the published share viewer.** It detects its context via `window.__dfgShareEnvelope` (share mode) or a `?preview=merge` URL param (merge preview). All `chrome.*` calls are guarded with feature checks because the same file runs in pages that have no `chrome` global.
+- **`chrome.scripting.executeScript` uses `allFrames: true` in the merge flow** so shares embedded in iframes on another site are discoverable. `activeTab` covers all frames in the active tab without needing host permissions.
 - **Tests run under Node**, no test runner: `node test/test-envelope.cjs`, `node test/test-merge.cjs`. Add a `test/test-*.cjs` for each new pure module.
 - **End-to-end UI checks via `agent-browser`.** Snapshot the rendered share or extension page; assert on DOM + envelope shape via `eval`.
 

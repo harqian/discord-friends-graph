@@ -32,7 +32,7 @@ function buildShareableHtml(envelope) {
   const visNetworkJs = readAsset('lib/vis-network.js');
   const graphJs = readAsset('graph.js');
 
-  const titleText = envelope.title ? envelope.title : 'Discord Lattice Share';
+  const titleText = envelope.title ? envelope.title : 'Discord Friends Graph Share';
   const safeJson = escapeJsonForScriptTag(JSON.stringify(envelope));
 
   return template

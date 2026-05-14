@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discord Friends Graph</title>
+<meta name="description" content="A Chrome extension that maps your Discord friends list as an interactive mutual-connections graph. Local-only, no backend.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: #0d0e11;
+    color: #dcddde;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: #8b96ff; text-decoration: none; }
+  a:hover { color: #b6bcff; }
+
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 56px 24px 80px;
+  }
+
+  header.hero {
+    margin-bottom: 32px;
+  }
+  header.hero h1 {
+    font-size: 36px;
+    line-height: 1.1;
+    margin: 0 0 10px;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+  header.hero .tag {
+    font-size: 16px;
+    color: #b9bbbe;
+    margin: 0;
+    max-width: 580px;
+  }
+
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 18px 0 0;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .btn.primary { background: #5865f2; color: #fff; }
+  .btn.primary:hover { background: #4752c4; color: #fff; }
+  .btn.secondary {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #dcddde;
+  }
+  .btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  .btn .arrow { opacity: 0.8; }
+
+  /* Action blocks: make-your-own + merge sit at the top */
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 28px 0 16px;
+  }
+  .action-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 18px 18px 20px;
+  }
+  .action-card h2 {
+    font-size: 17px;
+    margin: 0 0 10px;
+    color: #fff;
+  }
+  .action-card ol {
+    padding-left: 18px;
+    margin: 0;
+  }
+  .action-card ol li {
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #c4c5c8;
+  }
+  .action-card ol li::marker { color: #8b96ff; font-weight: 600; }
+  .action-card .footnote {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: #72767d;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 640px) {
+    .actions { grid-template-columns: 1fr; }
+    main { padding: 36px 18px 60px; }
+    header.hero h1 { font-size: 28px; }
+  }
+
+  /* Lower sections */
+  details {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 18px 0;
+  }
+  details summary {
+    cursor: pointer;
+    list-style: none;
+    color: #b9bbbe;
+    font-size: 14px;
+    user-select: none;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after {
+    content: '+';
+    float: right;
+    color: #72767d;
+    font-weight: 300;
+    font-size: 18px;
+    line-height: 1;
+  }
+  details[open] summary::after { content: '–'; }
+  details[open] summary { color: #fff; }
+  details .body { padding-top: 14px; font-size: 14px; color: #c4c5c8; }
+  details .body ul { padding-left: 18px; margin: 0; }
+  details .body ul li { margin-bottom: 6px; }
+  details .body p { margin: 0 0 10px; }
+
+  /* Demo iframe (lazily revealed) */
+  .demo {
+    margin-top: 14px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .demo iframe {
+    display: block;
+    width: 100%;
+    height: 380px;
+    border: 0;
+  }
+
+  code {
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.92em;
+    color: #f2f3f5;
+  }
+  strong { color: #fff; font-weight: 500; }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: center;
+    color: #72767d;
+    font-size: 13px;
+  }
+  footer a { color: #b9bbbe; }
+  footer a:hover { color: #fff; }
+  footer .spacer { flex: 1; }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <h1>Discord Friends Graph</h1>
+    <p class="tag">
+      Map your Discord friends list as an interactive mutual-connections graph.
+      Runs entirely in your browser. <strong>No backend, no accounts, no data uploaded.</strong>
+    </p>
+    <div class="cta-row">
+      <a class="btn primary" href="https://chromewebstore.google.com/detail/discord-friends-graph/bibbabmjfhdenaiccjdhecphakgcinag" target="_blank" rel="noopener">
+        Install for Chrome <span class="arrow">&#8599;</span>
+      </a>
+      <a class="btn secondary" href="https://github.com/Moonflower2022/discord-friends-graph" target="_blank" rel="noopener">
+        Source <span class="arrow">&#8599;</span>
+      </a>
+    </div>
+  </header>
+
+  <section class="actions" id="start">
+    <div class="action-card">
+      <h2>Make your own graph</h2>
+      <ol>
+        <li>Install the extension.</li>
+        <li>Open <code>discord.com</code> while logged in.</li>
+        <li>Click the extension icon &rarr; <strong>Scan Friends</strong>.</li>
+        <li>Hit <strong>View Graph</strong>.</li>
+      </ol>
+      <p class="footnote">A scan takes about 1 second per friend. Stop anytime.</p>
+    </div>
+    <div class="action-card">
+      <h2>Merge with someone else's</h2>
+      <ol>
+        <li>Make your own graph first.</li>
+        <li>Open the page that hosts theirs (or download its <code>.html</code>).</li>
+        <li>Click the icon &rarr; <strong>Merge with shared page</strong> &rarr; <strong>Read active tab</strong>.</li>
+        <li>Preview the union, optionally publish a combined share.</li>
+      </ol>
+      <p class="footnote">Works on embedded iframes too. You see how many of their friends are also yours.</p>
+    </div>
+  </section>
+
+  <details>
+    <summary>See an example</summary>
+    <div class="body">
+      <p>A five-friend sample graph. Pan, zoom, click a node, press <code>/</code> to search.</p>
+      <div class="demo">
+        <iframe src="demo.html" title="Discord Friends Graph demo" loading="lazy"></iframe>
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary>What about privacy?</summary>
+    <div class="body">
+      <ul>
+        <li>The extension makes no requests to any server we operate.</li>
+        <li>Your scan stays in <code>chrome.storage.local</code> on your machine.</li>
+        <li>When you publish a share, you choose what to hide: names, avatars, profile links, or specific friends.</li>
+        <li>Discord user IDs always remain readable in published shares &mdash; that's what makes merging possible. To exclude someone entirely, use the omit option.</li>
+        <li>The merge flow uses <code>activeTab</code>: the extension only reads the current tab when you click its icon.</li>
+      </ul>
+      <p>Full policy: <a href="https://github.com/Moonflower2022/discord-friends-graph/blob/main/PRIVACY_POLICY.md" target="_blank" rel="noopener">PRIVACY_POLICY.md</a>.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>How to share + embed</summary>
+    <div class="body">
+      <p>From the popup, hit <strong>Export Shareable Page</strong>. You get a self-contained <code>.html</code> file you can host anywhere. Embed with:</p>
+      <p><code>&lt;iframe src=&quot;your-share.html&quot; width=&quot;100%&quot; height=&quot;600&quot; style=&quot;border:0&quot;&gt;&lt;/iframe&gt;</code></p>
+      <p>Every embedded share has built-in <strong>Download</strong>, <strong>Copy embed</strong>, and (when in an iframe) <strong>Open in tab</strong> buttons. Visitors can save the file or grab the iframe snippet themselves.</p>
+    </div>
+  </details>
+
+  <footer>
+    <span>by <a href="https://harrisonqian.com" target="_blank" rel="noopener">Harrison Qian</a></span>
+    <span class="spacer"></span>
+    <a href="https://github.com/Moonflower2022/discord-friends-graph" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://chromewebstore.google.com/detail/discord-friends-graph/bibbabmjfhdenaiccjdhecphakgcinag" target="_blank" rel="noopener">Chrome Web Store</a>
+  </footer>
+</main>
+</body>
+</html>

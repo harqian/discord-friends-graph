@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
-  Discord Lattice share page (shareEnvelopeV1).
+  Discord Friends Graph share page (shareEnvelopeV1).
   Fully self-contained: vis-network + viewer code + graph data inlined.
-  Project: https://github.com/Moonflower2022/discord-lattice
+  Project: https://github.com/Moonflower2022/discord-friends-graph
   Schema:  lib/share-envelope.md in the project repo.
   To merge this page with your own scan, install the extension and click
   its toolbar icon while this page is the active tab.
@@ -12,12 +12,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__SHARE_TITLE__</title>
-<meta name="generator" content="Discord Lattice share v1">
-<meta name="discord-lattice-schema-version" content="1">
+<meta name="generator" content="Discord Friends Graph share v1">
+<meta name="discord-friends-graph-schema-version" content="1">
 <style>/*__VIEWER_CSS__*/</style>
 </head>
 <body>
-<div id="lattice-root">
+<div id="dfg-root">
   <div id="loading" role="status" aria-live="polite">
     <div id="loading-text">Loading graph...</div>
   </div>
@@ -43,20 +43,20 @@
     <div id="card-selection-title"></div>
     <div id="card-profiles"></div>
   </div>
-  <div id="lattice-toolbar" aria-hidden="false">
-    <button id="lattice-btn-open" class="lattice-tool-btn" type="button" hidden>Open in tab</button>
-    <button id="lattice-btn-download" class="lattice-tool-btn" type="button">Download</button>
-    <button id="lattice-btn-copy" class="lattice-tool-btn" type="button">Copy embed</button>
-    <span id="lattice-toolbar-toast" aria-live="polite"></span>
+  <div id="dfg-toolbar" aria-hidden="false">
+    <button id="dfg-btn-open" class="dfg-tool-btn" type="button" hidden>Open in tab</button>
+    <button id="dfg-btn-download" class="dfg-tool-btn" type="button">Download</button>
+    <button id="dfg-btn-copy" class="dfg-tool-btn" type="button">Copy embed</button>
+    <span id="dfg-toolbar-toast" aria-live="polite"></span>
   </div>
-  <div id="lattice-watermark">
-    <a href="https://chromewebstore.google.com/detail/discord-friends-graph/bibbabmjfhdenaiccjdhecphakgcinag" target="_blank" rel="noopener noreferrer" title="Install Discord Friends Graph from the Chrome Web Store">
-      <span class="watermark-text">made with <b>Discord Friends Graph</b></span>
+  <div id="dfg-watermark">
+    <a href="https://moonflower2022.github.io/discord-friends-graph/#start" target="_blank" rel="noopener noreferrer" title="Make your own friends graph">
+      <span class="watermark-text">make your own &amp; merge with mine</span>
       <span class="watermark-arrow" aria-hidden="true">&#8599;</span>
     </a>
   </div>
 </div>
-<script type="application/json" id="lattice-share-data">/*__SHARE_ENVELOPE_JSON__*/</script>
+<script type="application/json" id="dfg-share-data">/*__SHARE_ENVELOPE_JSON__*/</script>
 <script>/*__VIEWER_BOOTSTRAP_JS__*/</script>
 <script>/*__VIS_NETWORK_JS__*/</script>
 <script>/*__GRAPH_JS__*/</script>

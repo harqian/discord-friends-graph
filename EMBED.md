@@ -1,6 +1,6 @@
-# Embedding a Discord Lattice Share
+# Embedding a Discord Friends Graph Share
 
-A published Discord Lattice share file is a single self-contained `.html`
+A published Discord Friends Graph share file is a single self-contained `.html`
 document. It carries everything it needs to render (the vis-network library,
 the viewer code, your graph data) so it works offline, with no extension
 installed, and inside an `<iframe>` on any site you control.
@@ -8,13 +8,13 @@ installed, and inside an `<iframe>` on any site you control.
 ## Quick start
 
 After you click **Export Shareable Page** in the popup, you'll get a file like
-`discord-lattice-share-2026-05-12T...html`. Upload it to any static host
+`discord-friends-graph-share-2026-05-12T...html`. Upload it to any static host
 (GitHub Pages, Netlify drop, S3 + CloudFront, your personal site) and embed
 it with:
 
 ```html
 <iframe
-  src="https://example.com/path/to/discord-lattice-share.html"
+  src="https://example.com/path/to/discord-friends-graph-share.html"
   width="100%"
   height="600"
   style="border: 0; border-radius: 8px;"
@@ -63,7 +63,7 @@ Look at View Source. You'll see:
 
 - The full `vis-network` library (~1.43 MB)
 - A short CSS block for the viewer
-- A `<script type="application/json" id="lattice-share-data">...</script>`
+- A `<script type="application/json" id="dfg-share-data">...</script>`
   block — that's the graph data, in the `shareEnvelopeV1` format
   ([spec](./lib/share-envelope.md))
 - A small JS bootstrap that reads that JSON and hands it to the renderer

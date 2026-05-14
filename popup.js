@@ -205,7 +205,7 @@ function buildGraphExportData(connections) {
   return { nodes, edges };
 }
 
-const buildShareEnvelope = (connections, opts) => window.LatticeShareBuilder.buildShareEnvelope(connections, opts);
+const buildShareEnvelope = (connections, opts) => window.DiscordFriendsGraphBuilder.buildShareEnvelope(connections, opts);
 
 function escapeHtmlText(value) {
   return String(value)
@@ -235,7 +235,7 @@ async function buildShareableHtml(envelope) {
     fetchExtensionAsset('graph.js')
   ]);
 
-  const titleText = envelope.title ? envelope.title : 'Discord Lattice Share';
+  const titleText = envelope.title ? envelope.title : 'Discord Friends Graph Share';
   const safeJson = escapeJsonForScriptTag(JSON.stringify(envelope));
 
   return template
@@ -728,7 +728,7 @@ if (publishConfirmBtn) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 
       chrome.downloads.download(
-        { url, filename: `discord-lattice-share-${timestamp}.html`, saveAs: true },
+        { url, filename: `discord-friends-graph-share-${timestamp}.html`, saveAs: true },
         (downloadId) => {
           setTimeout(() => URL.revokeObjectURL(url), 30000);
           publishConfirmBtn.disabled = false;
@@ -795,7 +795,7 @@ async function loadOurEnvelope() {
         return;
       }
       try {
-        const envelope = window.LatticeShareBuilder.buildShareEnvelope(connections, {});
+        const envelope = window.DiscordFriendsGraphBuilder.buildShareEnvelope(connections, {});
         resolve(envelope);
       } catch (e) {
         reject(e);
@@ -806,7 +806,7 @@ async function loadOurEnvelope() {
 
 async function applyMergePreview(theirs) {
   try {
-    window.LatticeShareBuilder.validateShareEnvelope(theirs);
+    window.DiscordFriendsGraphBuilder.validateShareEnvelope(theirs);
   } catch (e) {
     showMergeError(`Not a valid share file: ${e.message}`);
     return;
@@ -818,8 +818,8 @@ async function applyMergePreview(theirs) {
     showMergeError(e.message);
     return;
   }
-  const summary = window.LatticeShareBuilder.summarizeMatch(theirs, ours);
-  const merged = window.LatticeShareBuilder.mergeEnvelopes(theirs, ours);
+  const summary = window.DiscordFriendsGraphBuilder.summarizeMatch(theirs, ours);
+  const merged = window.DiscordFriendsGraphBuilder.mergeEnvelopes(theirs, ours);
   mergeCache = { theirs, ours, merged };
 
   clearMergeError();
@@ -846,8 +846,8 @@ async function readShareFromFile(file) {
   }
   const text = await file.text();
   const doc = new DOMParser().parseFromString(text, 'text/html');
-  const el = doc.getElementById('lattice-share-data');
-  if (!el) throw new Error('File does not contain a Discord Lattice graph');
+  const el = doc.getElementById('dfg-share-data');
+  if (!el) throw new Error('File does not contain a Discord Friends Graph share');
   return JSON.parse(el.textContent);
 }
 
@@ -858,19 +858,19 @@ async function readShareFromActiveTab() {
     throw new Error('Cannot read chrome:// pages');
   }
 
-  // Search all frames so embedded lattice iframes are discoverable, not just the top page.
+  // Search all frames so embedded shares are discoverable, not just the top page.
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id, allFrames: true },
     func: () => {
-      const el = document.getElementById('lattice-share-data');
+      const el = document.getElementById('dfg-share-data');
       if (!el) return null;
       return { raw: el.textContent, frameUrl: window.location.href };
     }
   });
   const found = (results || []).map((r) => r && r.result).filter(Boolean);
-  if (found.length === 0) throw new Error('No Discord Lattice graph found on this page');
+  if (found.length === 0) throw new Error('No Discord Friends Graph share found on this page');
   if (found.length > 1) {
-    console.warn(`[lattice] ${found.length} lattice shares found on this page; using the first.`);
+    console.warn(`[dfg] ${found.length} Discord Friends Graph shares found on this page; using the first.`);
   }
   return JSON.parse(found[0].raw);
 }
@@ -977,7 +977,7 @@ if (mergePublishBtn) {
       const url = URL.createObjectURL(blob);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       chrome.downloads.download(
-        { url, filename: `discord-lattice-merged-${timestamp}.html`, saveAs: true },
+        { url, filename: `discord-friends-graph-merged-${timestamp}.html`, saveAs: true },
         (downloadId) => {
           setTimeout(() => URL.revokeObjectURL(url), 30000);
           mergePublishBtn.disabled = false;

@@ -153,7 +153,7 @@ test('mergeEnvelopes: identical envelopes produce identical-shape output', () =>
 
 test('mergeEnvelopes: rejects malformed input', () => {
   assert.throws(() => mergeEnvelopes({}, ours));
-  assert.throws(() => mergeEnvelopes(theirs, { schemaVersion: 2, kind: 'discord-lattice-share', nodes: [], edges: [] }));
+  assert.throws(() => mergeEnvelopes(theirs, { schemaVersion: 2, kind: 'discord-friends-graph-share', nodes: [], edges: [] }));
 });
 
 test('mergeEnvelopes: merged title combines both titles', () => {

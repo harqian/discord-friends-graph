@@ -1,8 +1,8 @@
 # Share Envelope (`shareEnvelopeV1`)
 
 The single JSON contract that crosses every extension/published-page boundary in
-Discord Lattice's share + merge features. Every published HTML embeds one of
-these as a `<script type="application/json" id="lattice-share-data">` block.
+Discord Friends Graph's share + merge features. Every published HTML embeds one of
+these as a `<script type="application/json" id="dfg-share-data">` block.
 Every consumer (the viewer in a published page, the merge flow in the popup)
 parses the same shape.
 
@@ -13,7 +13,7 @@ it.
 ## Where it appears
 
 - **Inside a published share HTML** — as the JSON payload of
-  `<script type="application/json" id="lattice-share-data">`.
+  `<script type="application/json" id="dfg-share-data">`.
 - **In `chrome.storage.session`** — under the key `mergePreviewEnvelope`, used
   to hand a merge result from the popup to the graph preview tab.
 
@@ -26,7 +26,7 @@ publish/merge time.
 ```jsonc
 {
   "schemaVersion": 1,
-  "kind": "discord-lattice-share",
+  "kind": "discord-friends-graph-share",
   "generatedAt": "2026-05-12T10:23:00.000Z",
   "title": "My Discord Friends",   // nullable, owner-provided, max ~80 chars
   "obfuscation": {
@@ -63,7 +63,7 @@ publish/merge time.
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `schemaVersion` | integer | yes | Must be `1`. Bump when making a non-additive change. |
-| `kind` | string | yes | Must be `"discord-lattice-share"`. Used to fingerprint lattice pages during merge. |
+| `kind` | string | yes | Must be `"discord-friends-graph-share"`. Used to fingerprint Discord Friends Graph share pages during merge. |
 | `generatedAt` | ISO-8601 string | yes | Wall-clock at publish time. Informational only. |
 | `title` | string \| null | yes | Owner-provided title, or `null`. |
 | `obfuscation` | object | yes | See below. |
@@ -116,7 +116,7 @@ are merged.
 A consumer reading an envelope (the merge flow, the viewer bootstrap) must:
 
 1. Reject the envelope if `schemaVersion !== 1` with a "version mismatch" error.
-2. Reject if `kind !== "discord-lattice-share"`.
+2. Reject if `kind !== "discord-friends-graph-share"`.
 3. Reject if `nodes` or `edges` is not an array.
 4. Drop any edge whose `source` or `target` is not present in `nodes`.
 5. Drop any edge where `source === target` (self-loops are meaningless here).
@@ -145,7 +145,7 @@ It is not authoritative or signed; a hand-edited envelope can claim anything.
 ```json
 {
   "schemaVersion": 1,
-  "kind": "discord-lattice-share",
+  "kind": "discord-friends-graph-share",
   "generatedAt": "2026-05-12T10:23:00.000Z",
   "title": "demo",
   "obfuscation": { "hideNames": false, "hideAvatars": false, "omittedNodeCount": 0 },

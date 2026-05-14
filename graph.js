@@ -152,7 +152,7 @@ let dataSource = async () => {
     }
   }
 
-  const envelope = typeof window !== 'undefined' ? window.__latticeShareEnvelope : null;
+  const envelope = typeof window !== 'undefined' ? window.__dfgShareEnvelope : null;
   if (envelope) {
     return {
       connections: envelopeToConnections(envelope),
@@ -179,7 +179,7 @@ let dataSource = async () => {
 };
 
 if (typeof window !== 'undefined') {
-  window.__latticeSetDataSource = (fn) => { dataSource = fn; };
+  window.__dfgSetDataSource = (fn) => { dataSource = fn; };
 }
 
 function getDisplayName(friend) {

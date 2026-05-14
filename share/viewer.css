@@ -2,7 +2,7 @@
 html, body { height: 100%; width: 100%; }
 body { background: #1a1a1a; overflow: hidden; }
 
-#lattice-root {
+#dfg-root {
   position: relative;
   width: 100%;
   height: 100%;
@@ -297,7 +297,7 @@ body { background: #1a1a1a; overflow: hidden; }
   display: none;
 }
 
-#lattice-watermark {
+#dfg-watermark {
   position: absolute;
   bottom: 12px;
   right: 12px;
@@ -306,7 +306,7 @@ body { background: #1a1a1a; overflow: hidden; }
   pointer-events: auto;
 }
 
-#lattice-toolbar {
+#dfg-toolbar {
   position: absolute;
   top: 12px;
   right: 12px;
@@ -316,7 +316,7 @@ body { background: #1a1a1a; overflow: hidden; }
   gap: 6px;
 }
 
-.lattice-tool-btn {
+.dfg-tool-btn {
   padding: 6px 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
@@ -331,15 +331,15 @@ body { background: #1a1a1a; overflow: hidden; }
   white-space: nowrap;
 }
 
-.lattice-tool-btn:hover {
+.dfg-tool-btn:hover {
   background: rgba(88, 101, 242, 0.25);
   border-color: rgba(88, 101, 242, 0.6);
   color: #fff;
 }
 
-.lattice-tool-btn[hidden] { display: none; }
+.dfg-tool-btn[hidden] { display: none; }
 
-#lattice-toolbar-toast {
+#dfg-toolbar-toast {
   position: absolute;
   right: 0;
   top: 38px;
@@ -355,14 +355,14 @@ body { background: #1a1a1a; overflow: hidden; }
   transition: opacity 0.18s;
 }
 
-#lattice-toolbar-toast.visible {
+#dfg-toolbar-toast.visible {
   opacity: 1;
 }
 
-.lattice-embed #lattice-toolbar { top: 8px; right: 8px; }
-.lattice-embed .lattice-tool-btn { font-size: 11px; padding: 5px 8px; }
+.dfg-embed #dfg-toolbar { top: 8px; right: 8px; }
+.dfg-embed .dfg-tool-btn { font-size: 11px; padding: 5px 8px; }
 
-#lattice-watermark a {
+#dfg-watermark a {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -377,25 +377,25 @@ body { background: #1a1a1a; overflow: hidden; }
   backdrop-filter: blur(6px);
 }
 
-#lattice-watermark a:hover {
+#dfg-watermark a:hover {
   background: rgba(88, 101, 242, 0.25);
   border-color: rgba(88, 101, 242, 0.6);
   color: #fff;
 }
 
-#lattice-watermark b {
+#dfg-watermark b {
   font-weight: 600;
   color: #fff;
 }
 
-#lattice-watermark .watermark-arrow {
+#dfg-watermark .watermark-arrow {
   font-size: 14px;
   line-height: 1;
   opacity: 0.7;
 }
 
-.lattice-embed #search-hints { font-size: 11px; padding: 6px 8px; }
-.lattice-embed #lattice-watermark a {
+.dfg-embed #search-hints { font-size: 11px; padding: 6px 8px; }
+.dfg-embed #dfg-watermark a {
   font-size: 11px;
   padding: 5px 10px;
 }

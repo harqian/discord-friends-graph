@@ -139,7 +139,7 @@ test('edges referencing absent friends are dropped', () => {
 });
 
 test('validateShareEnvelope rejects wrong schemaVersion', () => {
-  assert.throws(() => validateShareEnvelope({ schemaVersion: 2, kind: 'discord-lattice-share', nodes: [], edges: [] }));
+  assert.throws(() => validateShareEnvelope({ schemaVersion: 2, kind: 'discord-friends-graph-share', nodes: [], edges: [] }));
 });
 
 test('validateShareEnvelope rejects wrong kind', () => {
@@ -147,8 +147,8 @@ test('validateShareEnvelope rejects wrong kind', () => {
 });
 
 test('validateShareEnvelope rejects missing nodes/edges', () => {
-  assert.throws(() => validateShareEnvelope({ schemaVersion: 1, kind: 'discord-lattice-share', edges: [] }));
-  assert.throws(() => validateShareEnvelope({ schemaVersion: 1, kind: 'discord-lattice-share', nodes: [] }));
+  assert.throws(() => validateShareEnvelope({ schemaVersion: 1, kind: 'discord-friends-graph-share', edges: [] }));
+  assert.throws(() => validateShareEnvelope({ schemaVersion: 1, kind: 'discord-friends-graph-share', nodes: [] }));
 });
 
 console.log(`\n${passed} tests passed`);
